@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS aspiration_responses (
   responder_role ENUM('admin', 'lurah') NOT NULL,
   response TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_aspiration_responses_aspiration
     FOREIGN KEY (aspiration_id) REFERENCES citizen_aspirations(id)
     ON DELETE CASCADE,

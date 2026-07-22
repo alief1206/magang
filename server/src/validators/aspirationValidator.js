@@ -15,10 +15,28 @@ function validateCreateAspiration(payload) {
     errors.push('Tujuan aspirasi harus admin atau lurah.')
   }
 
+  if (payload.status && !statuses.includes(payload.status)) {
+    errors.push('Status aspirasi tidak valid.')
+  }
+
   return errors
 }
 
-function validateCreateResponse(payload) {
+function validateUpdateAspiration(payload) {
+  const errors = []
+
+  if (payload.assignedToRole && !assignedRoles.includes(payload.assignedToRole)) {
+    errors.push('Tujuan aspirasi harus admin atau lurah.')
+  }
+
+  if (payload.status && !statuses.includes(payload.status)) {
+    errors.push('Status aspirasi tidak valid.')
+  }
+
+  return errors
+}
+
+function validateResponse(payload) {
   const errors = []
 
   if (!payload.responderRole || !responderRoles.includes(payload.responderRole)) {
@@ -32,12 +50,8 @@ function validateCreateResponse(payload) {
   return errors
 }
 
-function isValidStatus(status) {
-  return statuses.includes(status)
-}
-
 module.exports = {
   validateCreateAspiration,
-  validateCreateResponse,
-  isValidStatus,
+  validateUpdateAspiration,
+  validateResponse,
 }

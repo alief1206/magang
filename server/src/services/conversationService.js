@@ -6,58 +6,76 @@ async function getConversations(filters) {
   return conversationModel.findAll(filters)
 }
 
+async function getConversationById(id) {
+  const conversation = await conversationModel.findById(id)
+
+  if (!conversation) {
+    throw createApiError('Percakapan tidak ditemukan.', 404)
+  }
+
+  const messages = await conversationModel.findMessages(id)
+
+  return {
+    ...conversation,
+    messages,
+  }
+}
+
 async function createConversation(payload) {
-  const errors = conversationValidator.validateCreateConversation(payload)
+  const errors = conversationValidator.validateConversation(payload)
 
   if (errors.length) {
     throw createApiError(errors.join(' '), 400)
   }
 
-  const conversation = await conversationModel.create({
-    citizenId: payload.citizenId,
-    targetRole: payload.targetRole,
-    subject: payload.subject,
-  })
-
-  let initialMessage = null
+  const conversation = await conversationModel.create(payload)
 
   if (payload.message) {
-    initialMessage = await conversationModel.addMessage({
+    const messageErrors = conversationValidator.validateMessage({
+      senderId: payload.senderId || payload.citizenId,
+      senderRole: payload.senderRole || 'warga',
+      message: payload.message,
+    })
+
+    if (messageErrors.length) {
+      throw createApiError(messageErrors.join(' '), 400)
+    }
+
+    await conversationModel.addMessage({
       conversationId: conversation.id,
-      senderId: payload.citizenId,
-      senderRole: 'warga',
+      senderId: payload.senderId || payload.citizenId,
+      senderRole: payload.senderRole || 'warga',
       message: payload.message,
     })
   }
 
-  return {
-    conversation,
-    initialMessage,
-  }
+  return getConversationById(conversation.id)
 }
 
-async function getMessages(conversationId) {
-  const conversation = await conversationModel.findById(conversationId)
-
-  if (!conversation) {
-    throw createApiError('Percakapan tidak ditemukan.', 404)
-  }
-
-  return conversationModel.findMessages(conversationId)
-}
-
-async function addMessage(conversationId, payload) {
-  const errors = conversationValidator.validateCreateMessage(payload)
+async function updateConversation(id, payload) {
+  const errors = conversationValidator.validateConversation(payload)
 
   if (errors.length) {
     throw createApiError(errors.join(' '), 400)
   }
 
-  const conversation = await conversationModel.findById(conversationId)
+  await getConversationById(id)
+  return conversationModel.update(id, payload)
+}
 
-  if (!conversation) {
-    throw createApiError('Percakapan tidak ditemukan.', 404)
+async function deleteConversation(id) {
+  await getConversationById(id)
+  await conversationModel.remove(id)
+}
+
+async function addMessage(conversationId, payload) {
+  const errors = conversationValidator.validateMessage(payload)
+
+  if (errors.length) {
+    throw createApiError(errors.join(' '), 400)
   }
+
+  await getConversationById(conversationId)
 
   const message = await conversationModel.addMessage({
     conversationId,
@@ -67,29 +85,46 @@ async function addMessage(conversationId, payload) {
   })
 
   const status = payload.senderRole === 'warga' ? 'waiting_response' : 'answered'
-  await conversationModel.updateStatus(conversationId, status)
+  await conversationModel.update(conversationId, { status })
 
   return message
 }
 
-async function updateStatus(conversationId, status) {
-  if (!conversationValidator.isValidStatus(status)) {
-    throw createApiError('Status percakapan tidak valid.', 400)
+async function updateMessage(conversationId, messageId, payload) {
+  const errors = conversationValidator.validateUpdateMessage(payload)
+
+  if (errors.length) {
+    throw createApiError(errors.join(' '), 400)
   }
 
-  const conversation = await conversationModel.updateStatus(conversationId, status)
+  await getConversationById(conversationId)
 
-  if (!conversation) {
-    throw createApiError('Percakapan tidak ditemukan.', 404)
+  const message = await conversationModel.updateMessage(conversationId, messageId, payload)
+
+  if (!message) {
+    throw createApiError('Pesan tidak ditemukan.', 404)
   }
 
-  return conversation
+  return message
+}
+
+async function deleteMessage(conversationId, messageId) {
+  await getConversationById(conversationId)
+
+  const deleted = await conversationModel.removeMessage(conversationId, messageId)
+
+  if (!deleted) {
+    throw createApiError('Pesan tidak ditemukan.', 404)
+  }
 }
 
 module.exports = {
   getConversations,
+  getConversationById,
   createConversation,
-  getMessages,
+  updateConversation,
+  deleteConversation,
   addMessage,
-  updateStatus,
+  updateMessage,
+  deleteMessage,
 }

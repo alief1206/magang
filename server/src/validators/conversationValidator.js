@@ -2,21 +2,21 @@ const targetRoles = ['admin', 'lurah']
 const senderRoles = ['warga', 'admin', 'lurah', 'system']
 const statuses = ['waiting_response', 'answered', 'closed']
 
-function validateCreateConversation(payload) {
+function validateConversation(payload) {
   const errors = []
 
   if (payload.targetRole && !targetRoles.includes(payload.targetRole)) {
-    errors.push('Target balasan harus admin atau lurah.')
+    errors.push('Tujuan chat harus admin atau lurah.')
   }
 
-  if (payload.message && typeof payload.message !== 'string') {
-    errors.push('Pesan awal harus berupa teks.')
+  if (payload.status && !statuses.includes(payload.status)) {
+    errors.push('Status chat tidak valid.')
   }
 
   return errors
 }
 
-function validateCreateMessage(payload) {
+function validateMessage(payload) {
   const errors = []
 
   if (!payload.senderRole || !senderRoles.includes(payload.senderRole)) {
@@ -30,12 +30,18 @@ function validateCreateMessage(payload) {
   return errors
 }
 
-function isValidStatus(status) {
-  return statuses.includes(status)
+function validateUpdateMessage(payload) {
+  const errors = []
+
+  if (!payload.message || typeof payload.message !== 'string') {
+    errors.push('Pesan wajib diisi.')
+  }
+
+  return errors
 }
 
 module.exports = {
-  validateCreateConversation,
-  validateCreateMessage,
-  isValidStatus,
+  validateConversation,
+  validateMessage,
+  validateUpdateMessage,
 }

@@ -1,4 +1,5 @@
 const db = require('../config/database')
+const { buildUpdateQuery } = require('../utils/queryBuilder')
 
 async function findAll(filters = {}) {
   const where = []
@@ -12,6 +13,11 @@ async function findAll(filters = {}) {
   if (filters.targetRole) {
     where.push('c.target_role = ?')
     params.push(filters.targetRole)
+  }
+
+  if (filters.citizenId) {
+    where.push('c.citizen_id = ?')
+    params.push(filters.citizenId)
   }
 
   const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : ''
@@ -65,18 +71,42 @@ async function findById(id) {
 async function create(conversation) {
   const [result] = await db.query(
     `
-      INSERT INTO chat_conversations (citizen_id, target_role, subject)
-      VALUES (?, ?, ?)
+      INSERT INTO chat_conversations (citizen_id, target_role, status, subject)
+      VALUES (?, ?, ?, ?)
     `,
-    [conversation.citizenId || null, conversation.targetRole || 'admin', conversation.subject || null],
+    [
+      conversation.citizenId || null,
+      conversation.targetRole || 'admin',
+      conversation.status || 'waiting_response',
+      conversation.subject || null,
+    ],
   )
 
   return findById(result.insertId)
 }
 
-async function updateStatus(id, status) {
-  await db.query('UPDATE chat_conversations SET status = ? WHERE id = ?', [status, id])
+async function update(id, conversation) {
+  const query = buildUpdateQuery(
+    'chat_conversations',
+    {
+      citizen_id: conversation.citizenId,
+      target_role: conversation.targetRole,
+      status: conversation.status,
+      subject: conversation.subject,
+    },
+    id,
+  )
+
+  if (query) {
+    await db.query(query.sql, query.values)
+  }
+
   return findById(id)
+}
+
+async function remove(id) {
+  const [result] = await db.query('DELETE FROM chat_conversations WHERE id = ?', [id])
+  return result.affectedRows > 0
 }
 
 async function addMessage(message) {
@@ -106,7 +136,8 @@ async function findMessages(conversationId) {
         m.sender_role AS senderRole,
         m.message,
         m.is_read AS isRead,
-        m.created_at AS createdAt
+        m.created_at AS createdAt,
+        m.updated_at AS updatedAt
       FROM chat_messages m
       LEFT JOIN users u ON u.id = m.sender_id
       WHERE m.conversation_id = ?
@@ -128,7 +159,8 @@ async function findMessageById(id) {
         sender_role AS senderRole,
         message,
         is_read AS isRead,
-        created_at AS createdAt
+        created_at AS createdAt,
+        updated_at AS updatedAt
       FROM chat_messages
       WHERE id = ?
     `,
@@ -138,11 +170,37 @@ async function findMessageById(id) {
   return rows[0] || null
 }
 
+async function updateMessage(conversationId, messageId, payload) {
+  const [result] = await db.query(
+    'UPDATE chat_messages SET message = ?, is_read = COALESCE(?, is_read) WHERE id = ? AND conversation_id = ?',
+    [payload.message, payload.isRead ?? null, messageId, conversationId],
+  )
+
+  if (!result.affectedRows) {
+    return null
+  }
+
+  return findMessageById(messageId)
+}
+
+async function removeMessage(conversationId, messageId) {
+  const [result] = await db.query('DELETE FROM chat_messages WHERE id = ? AND conversation_id = ?', [
+    messageId,
+    conversationId,
+  ])
+
+  return result.affectedRows > 0
+}
+
 module.exports = {
   findAll,
   findById,
   create,
-  updateStatus,
+  update,
+  remove,
   addMessage,
   findMessages,
+  findMessageById,
+  updateMessage,
+  removeMessage,
 }

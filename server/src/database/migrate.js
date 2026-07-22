@@ -12,10 +12,6 @@ function escapeDatabaseName(databaseName) {
 }
 
 async function runMigrations() {
-  if (!env.database.name) {
-    throw new Error('Isi DB_NAME di file .env terlebih dahulu.')
-  }
-
   const connection = await mysql.createConnection({
     host: env.database.host,
     port: env.database.port,

@@ -1,5 +1,5 @@
 function authMiddleware(req, _res, next) {
-  // Isi pengecekan login/session/token di sini saat fitur auth sudah dibuat.
+  // Nanti isi dari token/session login.
   req.user = null
   next()
 }

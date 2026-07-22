@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   message TEXT NOT NULL,
   is_read TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_chat_messages_conversation
     FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id)
     ON DELETE CASCADE,

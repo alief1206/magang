@@ -1,4 +1,5 @@
 const db = require('../config/database')
+const { buildUpdateQuery } = require('../utils/queryBuilder')
 
 async function findAll(filters = {}) {
   const where = []
@@ -96,9 +97,10 @@ async function create(aspiration) {
         compressed_image_path,
         compressed_image_size_bytes,
         compression_status,
+        status,
         assigned_to_role
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       aspiration.userId || null,
@@ -113,7 +115,8 @@ async function create(aspiration) {
       aspiration.imageSizeBytes || null,
       aspiration.compressedImagePath || null,
       aspiration.compressedImageSizeBytes || null,
-      aspiration.compressionStatus || 'pending',
+      aspiration.compressionStatus || 'not_needed',
+      aspiration.status || 'baru',
       aspiration.assignedToRole || 'admin',
     ],
   )
@@ -121,26 +124,39 @@ async function create(aspiration) {
   return findById(result.insertId)
 }
 
-async function updateStatus(id, status) {
-  await db.query('UPDATE citizen_aspirations SET status = ? WHERE id = ?', [status, id])
+async function update(id, aspiration) {
+  const query = buildUpdateQuery(
+    'citizen_aspirations',
+    {
+      user_id: aspiration.userId,
+      name: aspiration.name,
+      address: aspiration.address,
+      category: aspiration.category,
+      short_title: aspiration.shortTitle,
+      description: aspiration.description,
+      image_path: aspiration.imagePath,
+      image_original_name: aspiration.imageOriginalName,
+      image_mime_type: aspiration.imageMimeType,
+      image_size_bytes: aspiration.imageSizeBytes,
+      compressed_image_path: aspiration.compressedImagePath,
+      compressed_image_size_bytes: aspiration.compressedImageSizeBytes,
+      compression_status: aspiration.compressionStatus,
+      status: aspiration.status,
+      assigned_to_role: aspiration.assignedToRole,
+    },
+    id,
+  )
+
+  if (query) {
+    await db.query(query.sql, query.values)
+  }
+
   return findById(id)
 }
 
-async function addResponse(response) {
-  const [result] = await db.query(
-    `
-      INSERT INTO aspiration_responses (aspiration_id, responder_id, responder_role, response)
-      VALUES (?, ?, ?, ?)
-    `,
-    [response.aspirationId, response.responderId || null, response.responderRole, response.response],
-  )
-
-  await db.query('UPDATE citizen_aspirations SET status = ? WHERE id = ?', [
-    'ditanggapi',
-    response.aspirationId,
-  ])
-
-  return findResponseById(result.insertId)
+async function remove(id) {
+  const [result] = await db.query('DELETE FROM citizen_aspirations WHERE id = ?', [id])
+  return result.affectedRows > 0
 }
 
 async function findResponses(aspirationId) {
@@ -153,7 +169,8 @@ async function findResponses(aspirationId) {
         u.name AS responderName,
         r.responder_role AS responderRole,
         r.response,
-        r.created_at AS createdAt
+        r.created_at AS createdAt,
+        r.updated_at AS updatedAt
       FROM aspiration_responses r
       LEFT JOIN users u ON u.id = r.responder_id
       WHERE r.aspiration_id = ?
@@ -174,7 +191,8 @@ async function findResponseById(id) {
         responder_id AS responderId,
         responder_role AS responderRole,
         response,
-        created_at AS createdAt
+        created_at AS createdAt,
+        updated_at AS updatedAt
       FROM aspiration_responses
       WHERE id = ?
     `,
@@ -184,11 +202,59 @@ async function findResponseById(id) {
   return rows[0] || null
 }
 
+async function addResponse(response) {
+  const [result] = await db.query(
+    `
+      INSERT INTO aspiration_responses (aspiration_id, responder_id, responder_role, response)
+      VALUES (?, ?, ?, ?)
+    `,
+    [response.aspirationId, response.responderId || null, response.responderRole, response.response],
+  )
+
+  await db.query('UPDATE citizen_aspirations SET status = ? WHERE id = ?', [
+    'ditanggapi',
+    response.aspirationId,
+  ])
+
+  return findResponseById(result.insertId)
+}
+
+async function updateResponse(aspirationId, responseId, payload) {
+  const [result] = await db.query(
+    `
+      UPDATE aspiration_responses
+      SET responder_id = COALESCE(?, responder_id),
+          responder_role = COALESCE(?, responder_role),
+          response = ?
+      WHERE id = ? AND aspiration_id = ?
+    `,
+    [payload.responderId ?? null, payload.responderRole ?? null, payload.response, responseId, aspirationId],
+  )
+
+  if (!result.affectedRows) {
+    return null
+  }
+
+  return findResponseById(responseId)
+}
+
+async function removeResponse(aspirationId, responseId) {
+  const [result] = await db.query(
+    'DELETE FROM aspiration_responses WHERE id = ? AND aspiration_id = ?',
+    [responseId, aspirationId],
+  )
+
+  return result.affectedRows > 0
+}
+
 module.exports = {
   findAll,
   findById,
   create,
-  updateStatus,
-  addResponse,
+  update,
+  remove,
   findResponses,
+  addResponse,
+  updateResponse,
+  removeResponse,
 }

@@ -32,43 +32,42 @@ async function createAspiration(payload) {
   const imageMetadata = imageCompressionService.prepareImageMetadata(payload.image)
 
   return aspirationModel.create({
-    userId: payload.userId,
-    name: payload.name,
-    address: payload.address,
-    category: payload.category,
-    shortTitle: payload.shortTitle,
-    description: payload.description,
-    assignedToRole: payload.assignedToRole,
+    ...payload,
     ...imageMetadata,
   })
 }
 
-async function updateStatus(id, status) {
-  if (!aspirationValidator.isValidStatus(status)) {
-    throw createApiError('Status aspirasi tidak valid.', 400)
-  }
-
-  const aspiration = await aspirationModel.updateStatus(id, status)
-
-  if (!aspiration) {
-    throw createApiError('Aspirasi tidak ditemukan.', 404)
-  }
-
-  return aspiration
-}
-
-async function addResponse(aspirationId, payload) {
-  const errors = aspirationValidator.validateCreateResponse(payload)
+async function updateAspiration(id, payload) {
+  const errors = aspirationValidator.validateUpdateAspiration(payload)
 
   if (errors.length) {
     throw createApiError(errors.join(' '), 400)
   }
 
-  const aspiration = await aspirationModel.findById(aspirationId)
+  await getAspirationById(id)
 
-  if (!aspiration) {
-    throw createApiError('Aspirasi tidak ditemukan.', 404)
+  const imageMetadata =
+    payload.image === undefined ? {} : imageCompressionService.prepareImageMetadata(payload.image)
+
+  return aspirationModel.update(id, {
+    ...payload,
+    ...imageMetadata,
+  })
+}
+
+async function deleteAspiration(id) {
+  await getAspirationById(id)
+  await aspirationModel.remove(id)
+}
+
+async function addResponse(aspirationId, payload) {
+  const errors = aspirationValidator.validateResponse(payload)
+
+  if (errors.length) {
+    throw createApiError(errors.join(' '), 400)
   }
+
+  await getAspirationById(aspirationId)
 
   return aspirationModel.addResponse({
     aspirationId,
@@ -78,10 +77,41 @@ async function addResponse(aspirationId, payload) {
   })
 }
 
+async function updateResponse(aspirationId, responseId, payload) {
+  const errors = aspirationValidator.validateResponse(payload)
+
+  if (errors.length) {
+    throw createApiError(errors.join(' '), 400)
+  }
+
+  await getAspirationById(aspirationId)
+
+  const response = await aspirationModel.updateResponse(aspirationId, responseId, payload)
+
+  if (!response) {
+    throw createApiError('Tanggapan tidak ditemukan.', 404)
+  }
+
+  return response
+}
+
+async function deleteResponse(aspirationId, responseId) {
+  await getAspirationById(aspirationId)
+
+  const deleted = await aspirationModel.removeResponse(aspirationId, responseId)
+
+  if (!deleted) {
+    throw createApiError('Tanggapan tidak ditemukan.', 404)
+  }
+}
+
 module.exports = {
   getAspirations,
   getAspirationById,
   createAspiration,
-  updateStatus,
+  updateAspiration,
+  deleteAspiration,
   addResponse,
+  updateResponse,
+  deleteResponse,
 }
