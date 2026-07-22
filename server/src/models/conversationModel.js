@@ -1,0 +1,148 @@
+const db = require('../config/database')
+
+async function findAll(filters = {}) {
+  const where = []
+  const params = []
+
+  if (filters.status) {
+    where.push('c.status = ?')
+    params.push(filters.status)
+  }
+
+  if (filters.targetRole) {
+    where.push('c.target_role = ?')
+    params.push(filters.targetRole)
+  }
+
+  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : ''
+
+  const [rows] = await db.query(
+    `
+      SELECT
+        c.id,
+        c.citizen_id AS citizenId,
+        u.name AS citizenName,
+        c.target_role AS targetRole,
+        c.status,
+        c.subject,
+        c.last_message_at AS lastMessageAt,
+        c.created_at AS createdAt,
+        c.updated_at AS updatedAt
+      FROM chat_conversations c
+      LEFT JOIN users u ON u.id = c.citizen_id
+      ${whereClause}
+      ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
+    `,
+    params,
+  )
+
+  return rows
+}
+
+async function findById(id) {
+  const [rows] = await db.query(
+    `
+      SELECT
+        c.id,
+        c.citizen_id AS citizenId,
+        u.name AS citizenName,
+        c.target_role AS targetRole,
+        c.status,
+        c.subject,
+        c.last_message_at AS lastMessageAt,
+        c.created_at AS createdAt,
+        c.updated_at AS updatedAt
+      FROM chat_conversations c
+      LEFT JOIN users u ON u.id = c.citizen_id
+      WHERE c.id = ?
+    `,
+    [id],
+  )
+
+  return rows[0] || null
+}
+
+async function create(conversation) {
+  const [result] = await db.query(
+    `
+      INSERT INTO chat_conversations (citizen_id, target_role, subject)
+      VALUES (?, ?, ?)
+    `,
+    [conversation.citizenId || null, conversation.targetRole || 'admin', conversation.subject || null],
+  )
+
+  return findById(result.insertId)
+}
+
+async function updateStatus(id, status) {
+  await db.query('UPDATE chat_conversations SET status = ? WHERE id = ?', [status, id])
+  return findById(id)
+}
+
+async function addMessage(message) {
+  const [result] = await db.query(
+    `
+      INSERT INTO chat_messages (conversation_id, sender_id, sender_role, message)
+      VALUES (?, ?, ?, ?)
+    `,
+    [message.conversationId, message.senderId || null, message.senderRole, message.message],
+  )
+
+  await db.query('UPDATE chat_conversations SET last_message_at = CURRENT_TIMESTAMP WHERE id = ?', [
+    message.conversationId,
+  ])
+
+  return findMessageById(result.insertId)
+}
+
+async function findMessages(conversationId) {
+  const [rows] = await db.query(
+    `
+      SELECT
+        m.id,
+        m.conversation_id AS conversationId,
+        m.sender_id AS senderId,
+        u.name AS senderName,
+        m.sender_role AS senderRole,
+        m.message,
+        m.is_read AS isRead,
+        m.created_at AS createdAt
+      FROM chat_messages m
+      LEFT JOIN users u ON u.id = m.sender_id
+      WHERE m.conversation_id = ?
+      ORDER BY m.created_at ASC
+    `,
+    [conversationId],
+  )
+
+  return rows
+}
+
+async function findMessageById(id) {
+  const [rows] = await db.query(
+    `
+      SELECT
+        id,
+        conversation_id AS conversationId,
+        sender_id AS senderId,
+        sender_role AS senderRole,
+        message,
+        is_read AS isRead,
+        created_at AS createdAt
+      FROM chat_messages
+      WHERE id = ?
+    `,
+    [id],
+  )
+
+  return rows[0] || null
+}
+
+module.exports = {
+  findAll,
+  findById,
+  create,
+  updateStatus,
+  addMessage,
+  findMessages,
+}

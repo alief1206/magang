@@ -3,3 +3,9 @@ dist/
 .env
 .env.local
 npm-debug.log*
+server/uploads/*
+!server/uploads/.gitkeep
+!server/uploads/README.md
+!server/uploads/aspirations/
+!server/uploads/aspirations/.gitkeep
+!server/uploads/aspirations/README.md
