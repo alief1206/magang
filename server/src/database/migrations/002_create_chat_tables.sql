@@ -1,15 +1,20 @@
 CREATE TABLE IF NOT EXISTS chat_conversations (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  kelurahan_id INT NULL,
   citizen_id INT NULL,
   target_role ENUM('admin', 'lurah') NOT NULL DEFAULT 'admin',
   status ENUM('waiting_response', 'answered', 'closed') NOT NULL DEFAULT 'waiting_response',
-  subject VARCHAR(150) NULL,
+  subject TEXT NULL,
   last_message_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_chat_conversations_kelurahan
+    FOREIGN KEY (kelurahan_id) REFERENCES kelurahans(id)
+    ON DELETE SET NULL,
   CONSTRAINT fk_chat_conversations_citizen
     FOREIGN KEY (citizen_id) REFERENCES users(id)
     ON DELETE SET NULL,
+  INDEX idx_chat_conversations_kelurahan (kelurahan_id),
   INDEX idx_chat_conversations_citizen (citizen_id),
   INDEX idx_chat_conversations_target_role (target_role),
   INDEX idx_chat_conversations_status (status)

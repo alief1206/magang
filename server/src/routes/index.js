@@ -4,6 +4,7 @@ const authRoutes = require('./authRoutes')
 const chatRoutes = require('./chatRoutes')
 const conversationRoutes = require('./conversationRoutes')
 const healthRoutes = require('./healthRoutes')
+const kelurahanRoutes = require('./kelurahanRoutes')
 const rootRoutes = require('./rootRoutes')
 const userRoutes = require('./userRoutes')
 
@@ -15,6 +16,7 @@ router.use('/api/auth', authRoutes)
 router.use('/api/chat', chatRoutes)
 router.use('/api/chats', conversationRoutes)
 router.use('/api/aspirations', aspirationRoutes)
+router.use('/api/kelurahans', kelurahanRoutes)
 router.use('/api/users', userRoutes)
 
 module.exports = router

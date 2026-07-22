@@ -1,5 +1,17 @@
 const db = require('../config/database')
+const encryption = require('../utils/encryption')
 const { buildUpdateQuery } = require('../utils/queryBuilder')
+
+const aspirationEncryptedFields = ['name', 'address', 'shortTitle', 'description']
+const responseEncryptedFields = ['response', 'responderName']
+
+function decryptAspiration(aspiration) {
+  return encryption.decryptFields(aspiration, aspirationEncryptedFields)
+}
+
+function decryptResponse(response) {
+  return encryption.decryptFields(response, responseEncryptedFields)
+}
 
 async function findAll(filters = {}) {
   const where = []
@@ -20,12 +32,24 @@ async function findAll(filters = {}) {
     params.push(filters.assignedToRole)
   }
 
+  if (filters.kelurahanId) {
+    where.push('a.kelurahan_id = ?')
+    params.push(filters.kelurahanId)
+  }
+
+  if (filters.userId) {
+    where.push('a.user_id = ?')
+    params.push(filters.userId)
+  }
+
   const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : ''
 
   const [rows] = await db.query(
     `
       SELECT
         a.id,
+        a.kelurahan_id AS kelurahanId,
+        k.name AS kelurahanName,
         a.user_id AS userId,
         a.name,
         a.address,
@@ -40,13 +64,14 @@ async function findAll(filters = {}) {
         a.created_at AS createdAt,
         a.updated_at AS updatedAt
       FROM citizen_aspirations a
+      LEFT JOIN kelurahans k ON k.id = a.kelurahan_id
       ${whereClause}
       ORDER BY a.created_at DESC
     `,
     params,
   )
 
-  return rows
+  return encryption.decryptRows(rows, aspirationEncryptedFields)
 }
 
 async function findById(id) {
@@ -54,6 +79,8 @@ async function findById(id) {
     `
       SELECT
         a.id,
+        a.kelurahan_id AS kelurahanId,
+        k.name AS kelurahanName,
         a.user_id AS userId,
         a.name,
         a.address,
@@ -72,19 +99,22 @@ async function findById(id) {
         a.created_at AS createdAt,
         a.updated_at AS updatedAt
       FROM citizen_aspirations a
+      LEFT JOIN kelurahans k ON k.id = a.kelurahan_id
       WHERE a.id = ?
     `,
     [id],
   )
 
-  return rows[0] || null
+  return decryptAspiration(rows[0] || null)
 }
 
 async function create(aspiration) {
+  const encryptedAspiration = encryption.encryptFields(aspiration, aspirationEncryptedFields)
   const [result] = await db.query(
     `
       INSERT INTO citizen_aspirations (
         user_id,
+        kelurahan_id,
         name,
         address,
         category,
@@ -100,15 +130,16 @@ async function create(aspiration) {
         status,
         assigned_to_role
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       aspiration.userId || null,
-      aspiration.name,
-      aspiration.address,
+      aspiration.kelurahanId || null,
+      encryptedAspiration.name,
+      encryptedAspiration.address,
       aspiration.category,
-      aspiration.shortTitle,
-      aspiration.description,
+      encryptedAspiration.shortTitle,
+      encryptedAspiration.description,
       aspiration.imagePath || null,
       aspiration.imageOriginalName || null,
       aspiration.imageMimeType || null,
@@ -129,11 +160,12 @@ async function update(id, aspiration) {
     'citizen_aspirations',
     {
       user_id: aspiration.userId,
-      name: aspiration.name,
-      address: aspiration.address,
+      kelurahan_id: aspiration.kelurahanId,
+      name: encryption.encryptText(aspiration.name),
+      address: encryption.encryptText(aspiration.address),
       category: aspiration.category,
-      short_title: aspiration.shortTitle,
-      description: aspiration.description,
+      short_title: encryption.encryptText(aspiration.shortTitle),
+      description: encryption.encryptText(aspiration.description),
       image_path: aspiration.imagePath,
       image_original_name: aspiration.imageOriginalName,
       image_mime_type: aspiration.imageMimeType,
@@ -179,7 +211,7 @@ async function findResponses(aspirationId) {
     [aspirationId],
   )
 
-  return rows
+  return encryption.decryptRows(rows, responseEncryptedFields)
 }
 
 async function findResponseById(id) {
@@ -199,16 +231,22 @@ async function findResponseById(id) {
     [id],
   )
 
-  return rows[0] || null
+  return decryptResponse(rows[0] || null)
 }
 
 async function addResponse(response) {
+  const encryptedResponse = encryption.encryptFields(response, responseEncryptedFields)
   const [result] = await db.query(
     `
       INSERT INTO aspiration_responses (aspiration_id, responder_id, responder_role, response)
       VALUES (?, ?, ?, ?)
     `,
-    [response.aspirationId, response.responderId || null, response.responderRole, response.response],
+    [
+      response.aspirationId,
+      response.responderId || null,
+      response.responderRole,
+      encryptedResponse.response,
+    ],
   )
 
   await db.query('UPDATE citizen_aspirations SET status = ? WHERE id = ?', [
@@ -220,6 +258,7 @@ async function addResponse(response) {
 }
 
 async function updateResponse(aspirationId, responseId, payload) {
+  const encryptedPayload = encryption.encryptFields(payload, responseEncryptedFields)
   const [result] = await db.query(
     `
       UPDATE aspiration_responses
@@ -228,7 +267,13 @@ async function updateResponse(aspirationId, responseId, payload) {
           response = ?
       WHERE id = ? AND aspiration_id = ?
     `,
-    [payload.responderId ?? null, payload.responderRole ?? null, payload.response, responseId, aspirationId],
+    [
+      payload.responderId ?? null,
+      payload.responderRole ?? null,
+      encryptedPayload.response,
+      responseId,
+      aspirationId,
+    ],
   )
 
   if (!result.affectedRows) {

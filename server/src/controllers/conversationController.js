@@ -6,7 +6,7 @@ async function getConversations(req, res, next) {
       status: req.query.status,
       targetRole: req.query.targetRole,
       citizenId: req.query.citizenId,
-    })
+    }, req.user)
 
     res.json({
       data: conversations,
@@ -18,7 +18,7 @@ async function getConversations(req, res, next) {
 
 async function getConversationById(req, res, next) {
   try {
-    const conversation = await conversationService.getConversationById(req.params.id)
+    const conversation = await conversationService.getConversationById(req.params.id, req.user)
 
     res.json({
       data: conversation,
@@ -30,7 +30,7 @@ async function getConversationById(req, res, next) {
 
 async function createConversation(req, res, next) {
   try {
-    const conversation = await conversationService.createConversation(req.body)
+    const conversation = await conversationService.createConversation(req.body, req.user)
 
     res.status(201).json({
       message: 'Percakapan berhasil ditambahkan.',
@@ -43,7 +43,7 @@ async function createConversation(req, res, next) {
 
 async function updateConversation(req, res, next) {
   try {
-    const conversation = await conversationService.updateConversation(req.params.id, req.body)
+    const conversation = await conversationService.updateConversation(req.params.id, req.body, req.user)
 
     res.json({
       message: 'Percakapan berhasil diubah.',
@@ -56,7 +56,7 @@ async function updateConversation(req, res, next) {
 
 async function deleteConversation(req, res, next) {
   try {
-    await conversationService.deleteConversation(req.params.id)
+    await conversationService.deleteConversation(req.params.id, req.user)
 
     res.json({
       message: 'Percakapan berhasil dihapus.',
@@ -68,7 +68,7 @@ async function deleteConversation(req, res, next) {
 
 async function addMessage(req, res, next) {
   try {
-    const message = await conversationService.addMessage(req.params.id, req.body)
+    const message = await conversationService.addMessage(req.params.id, req.body, req.user)
 
     res.status(201).json({
       message: 'Pesan berhasil ditambahkan.',
@@ -85,6 +85,7 @@ async function updateMessage(req, res, next) {
       req.params.id,
       req.params.messageId,
       req.body,
+      req.user,
     )
 
     res.json({
@@ -98,7 +99,7 @@ async function updateMessage(req, res, next) {
 
 async function deleteMessage(req, res, next) {
   try {
-    await conversationService.deleteMessage(req.params.id, req.params.messageId)
+    await conversationService.deleteMessage(req.params.id, req.params.messageId, req.user)
 
     res.json({
       message: 'Pesan berhasil dihapus.',

@@ -1,5 +1,6 @@
 const userModel = require('../models/userModel')
 const createApiError = require('../utils/apiError')
+const passwordService = require('../utils/password')
 const userValidator = require('../validators/userValidator')
 
 async function getUsers() {
@@ -23,7 +24,12 @@ async function createUser(payload) {
     throw createApiError(errors.join(' '), 400)
   }
 
-  return userModel.create(payload)
+  const hashedPassword = await passwordService.hashPassword(payload.password)
+
+  return userModel.create({
+    ...payload,
+    password: hashedPassword,
+  })
 }
 
 async function updateUser(id, payload) {
@@ -34,7 +40,13 @@ async function updateUser(id, payload) {
   }
 
   await getUserById(id)
-  return userModel.update(id, payload)
+  const nextPayload = { ...payload }
+
+  if (payload.password) {
+    nextPayload.password = await passwordService.hashPassword(payload.password)
+  }
+
+  return userModel.update(id, nextPayload)
 }
 
 async function deleteUser(id) {

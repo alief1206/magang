@@ -6,7 +6,7 @@ async function getAspirations(req, res, next) {
       status: req.query.status,
       category: req.query.category,
       assignedToRole: req.query.assignedToRole,
-    })
+    }, req.user)
 
     res.json({
       data: aspirations,
@@ -18,7 +18,7 @@ async function getAspirations(req, res, next) {
 
 async function getAspirationById(req, res, next) {
   try {
-    const aspiration = await aspirationService.getAspirationById(req.params.id)
+    const aspiration = await aspirationService.getAspirationById(req.params.id, req.user)
 
     res.json({
       data: aspiration,
@@ -30,7 +30,7 @@ async function getAspirationById(req, res, next) {
 
 async function createAspiration(req, res, next) {
   try {
-    const aspiration = await aspirationService.createAspiration(req.body)
+    const aspiration = await aspirationService.createAspiration(req.body, req.user)
 
     res.status(201).json({
       message: 'Aspirasi berhasil ditambahkan.',
@@ -43,7 +43,7 @@ async function createAspiration(req, res, next) {
 
 async function updateAspiration(req, res, next) {
   try {
-    const aspiration = await aspirationService.updateAspiration(req.params.id, req.body)
+    const aspiration = await aspirationService.updateAspiration(req.params.id, req.body, req.user)
 
     res.json({
       message: 'Aspirasi berhasil diubah.',
@@ -56,7 +56,7 @@ async function updateAspiration(req, res, next) {
 
 async function deleteAspiration(req, res, next) {
   try {
-    await aspirationService.deleteAspiration(req.params.id)
+    await aspirationService.deleteAspiration(req.params.id, req.user)
 
     res.json({
       message: 'Aspirasi berhasil dihapus.',
@@ -68,7 +68,7 @@ async function deleteAspiration(req, res, next) {
 
 async function addResponse(req, res, next) {
   try {
-    const response = await aspirationService.addResponse(req.params.id, req.body)
+    const response = await aspirationService.addResponse(req.params.id, req.body, req.user)
 
     res.status(201).json({
       message: 'Tanggapan berhasil ditambahkan.',
@@ -85,6 +85,7 @@ async function updateResponse(req, res, next) {
       req.params.id,
       req.params.responseId,
       req.body,
+      req.user,
     )
 
     res.json({
@@ -98,7 +99,7 @@ async function updateResponse(req, res, next) {
 
 async function deleteResponse(req, res, next) {
   try {
-    await aspirationService.deleteResponse(req.params.id, req.params.responseId)
+    await aspirationService.deleteResponse(req.params.id, req.params.responseId, req.user)
 
     res.json({
       message: 'Tanggapan berhasil dihapus.',

@@ -1,10 +1,11 @@
 CREATE TABLE IF NOT EXISTS citizen_aspirations (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  kelurahan_id INT NULL,
   user_id INT NULL,
-  name VARCHAR(100) NOT NULL,
+  name TEXT NOT NULL,
   address TEXT NOT NULL,
   category VARCHAR(100) NOT NULL,
-  short_title VARCHAR(150) NOT NULL,
+  short_title TEXT NOT NULL,
   description TEXT NOT NULL,
   image_path VARCHAR(255) NULL,
   image_original_name VARCHAR(255) NULL,
@@ -17,9 +18,13 @@ CREATE TABLE IF NOT EXISTS citizen_aspirations (
   assigned_to_role ENUM('admin', 'lurah') NOT NULL DEFAULT 'admin',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_citizen_aspirations_kelurahan
+    FOREIGN KEY (kelurahan_id) REFERENCES kelurahans(id)
+    ON DELETE SET NULL,
   CONSTRAINT fk_citizen_aspirations_user
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE SET NULL,
+  INDEX idx_citizen_aspirations_kelurahan (kelurahan_id),
   INDEX idx_citizen_aspirations_user (user_id),
   INDEX idx_citizen_aspirations_category (category),
   INDEX idx_citizen_aspirations_status (status),

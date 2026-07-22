@@ -1,7 +1,12 @@
 const express = require('express')
 const userController = require('../controllers/userController')
+const adminMiddleware = require('../middlewares/adminMiddleware')
+const authMiddleware = require('../middlewares/authMiddleware')
 
 const router = express.Router()
+
+router.use(authMiddleware)
+router.use(adminMiddleware)
 
 router.get('/', userController.getUsers)
 router.post('/', userController.createUser)

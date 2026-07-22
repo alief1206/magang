@@ -3,16 +3,56 @@ const createApiError = require('../utils/apiError')
 const aspirationValidator = require('../validators/aspirationValidator')
 const imageCompressionService = require('./imageCompressionService')
 
-async function getAspirations(filters) {
-  return aspirationModel.findAll(filters)
+function isStaff(user) {
+  return user && ['admin', 'lurah'].includes(user.role)
 }
 
-async function getAspirationById(id) {
+function getScopedFilters(filters, user) {
+  if (!user) {
+    throw createApiError('Login terlebih dahulu.', 401)
+  }
+
+  if (isStaff(user)) {
+    return {
+      ...filters,
+      kelurahanId: user.kelurahanId,
+    }
+  }
+
+  return {
+    ...filters,
+    userId: user.id,
+  }
+}
+
+function ensureCanAccessAspiration(aspiration, user) {
+  if (!user) {
+    throw createApiError('Login terlebih dahulu.', 401)
+  }
+
+  if (isStaff(user) && Number(aspiration.kelurahanId) === Number(user.kelurahanId)) {
+    return
+  }
+
+  if (user.role === 'warga' && Number(aspiration.userId) === Number(user.id)) {
+    return
+  }
+
+  throw createApiError('Anda tidak memiliki akses ke aspirasi kelurahan lain.', 403)
+}
+
+async function getAspirations(filters, user) {
+  return aspirationModel.findAll(getScopedFilters(filters, user))
+}
+
+async function getAspirationById(id, user) {
   const aspiration = await aspirationModel.findById(id)
 
   if (!aspiration) {
     throw createApiError('Aspirasi tidak ditemukan.', 404)
   }
+
+  ensureCanAccessAspiration(aspiration, user)
 
   const responses = await aspirationModel.findResponses(id)
 
@@ -22,7 +62,7 @@ async function getAspirationById(id) {
   }
 }
 
-async function createAspiration(payload) {
+async function createAspiration(payload, user) {
   const errors = aspirationValidator.validateCreateAspiration(payload)
 
   if (errors.length) {
@@ -30,21 +70,37 @@ async function createAspiration(payload) {
   }
 
   const imageMetadata = imageCompressionService.prepareImageMetadata(payload.image)
+  const userKelurahanId = user && user.kelurahanId
+  const kelurahanId = payload.kelurahanId || userKelurahanId
+
+  if (!kelurahanId) {
+    throw createApiError('Kelurahan wajib dipilih.', 400)
+  }
+
+  if (isStaff(user) && Number(kelurahanId) !== Number(user.kelurahanId)) {
+    throw createApiError('Admin hanya boleh membuat aspirasi untuk kelurahannya sendiri.', 403)
+  }
 
   return aspirationModel.create({
     ...payload,
+    userId: payload.userId || (user && user.role === 'warga' ? user.id : undefined),
+    kelurahanId,
     ...imageMetadata,
   })
 }
 
-async function updateAspiration(id, payload) {
+async function updateAspiration(id, payload, user) {
   const errors = aspirationValidator.validateUpdateAspiration(payload)
 
   if (errors.length) {
     throw createApiError(errors.join(' '), 400)
   }
 
-  await getAspirationById(id)
+  const existingAspiration = await getAspirationById(id, user)
+
+  if (payload.kelurahanId && Number(payload.kelurahanId) !== Number(existingAspiration.kelurahanId)) {
+    throw createApiError('Kelurahan aspirasi tidak boleh dipindahkan dari route ini.', 400)
+  }
 
   const imageMetadata =
     payload.image === undefined ? {} : imageCompressionService.prepareImageMetadata(payload.image)
@@ -55,38 +111,48 @@ async function updateAspiration(id, payload) {
   })
 }
 
-async function deleteAspiration(id) {
-  await getAspirationById(id)
+async function deleteAspiration(id, user) {
+  await getAspirationById(id, user)
   await aspirationModel.remove(id)
 }
 
-async function addResponse(aspirationId, payload) {
-  const errors = aspirationValidator.validateResponse(payload)
+async function addResponse(aspirationId, payload, user) {
+  const responsePayload = {
+    ...payload,
+    responderId: payload.responderId || (user && user.id),
+    responderRole: payload.responderRole || (user && user.role),
+  }
+  const errors = aspirationValidator.validateResponse(responsePayload)
 
   if (errors.length) {
     throw createApiError(errors.join(' '), 400)
   }
 
-  await getAspirationById(aspirationId)
+  await getAspirationById(aspirationId, user)
 
   return aspirationModel.addResponse({
     aspirationId,
-    responderId: payload.responderId,
-    responderRole: payload.responderRole,
-    response: payload.response,
+    responderId: responsePayload.responderId,
+    responderRole: responsePayload.responderRole,
+    response: responsePayload.response,
   })
 }
 
-async function updateResponse(aspirationId, responseId, payload) {
-  const errors = aspirationValidator.validateResponse(payload)
+async function updateResponse(aspirationId, responseId, payload, user) {
+  const responsePayload = {
+    ...payload,
+    responderId: payload.responderId || (user && user.id),
+    responderRole: payload.responderRole || (user && user.role),
+  }
+  const errors = aspirationValidator.validateResponse(responsePayload)
 
   if (errors.length) {
     throw createApiError(errors.join(' '), 400)
   }
 
-  await getAspirationById(aspirationId)
+  await getAspirationById(aspirationId, user)
 
-  const response = await aspirationModel.updateResponse(aspirationId, responseId, payload)
+  const response = await aspirationModel.updateResponse(aspirationId, responseId, responsePayload)
 
   if (!response) {
     throw createApiError('Tanggapan tidak ditemukan.', 404)
@@ -95,8 +161,8 @@ async function updateResponse(aspirationId, responseId, payload) {
   return response
 }
 
-async function deleteResponse(aspirationId, responseId) {
-  await getAspirationById(aspirationId)
+async function deleteResponse(aspirationId, responseId, user) {
+  await getAspirationById(aspirationId, user)
 
   const deleted = await aspirationModel.removeResponse(aspirationId, responseId)
 

@@ -7,6 +7,7 @@ function validateCreateUser(payload) {
   if (!payload.email) errors.push('Email wajib diisi.')
   if (!payload.password) errors.push('Password wajib diisi.')
   if (payload.role && !roles.includes(payload.role)) errors.push('Role user tidak valid.')
+  if (!payload.kelurahanId) errors.push('Kelurahan wajib dipilih.')
 
   return errors
 }

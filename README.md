@@ -28,6 +28,7 @@ Back-end:
 - Helmet
 - Compression
 - Nodemon
+- Crypto bawaan Node.js untuk enkripsi data, hash password, dan token login
 
 Catatan: fitur AI/chatbot dikembangkan sendiri dan tidak memakai API AI eksternal.
 
@@ -75,6 +76,8 @@ DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=
 DB_NAME=desa_digital_db
+AUTH_TOKEN_SECRET=ganti-secret-token-minimal-32-karakter
+DATA_ENCRYPTION_KEY=ganti-key-enkripsi-data-minimal-32-karakter
 ```
 
 ## Database MySQL
@@ -89,6 +92,7 @@ npm.cmd run db:migrate
 Migration akan membuat tabel:
 
 - `users`
+- `kelurahans`
 - `chat_conversations`
 - `chat_messages`
 - `citizen_aspirations`
@@ -108,7 +112,30 @@ Middleware admin sudah disiapkan di:
 server/src/middlewares/adminMiddleware.js
 ```
 
-Route CRUD belum dikunci penuh ke admin karena fitur login/token belum dibuat. Setelah fitur login selesai, route admin tinggal dipasangi middleware tersebut.
+Token login sudah berisi `id`, `role`, dan `kelurahanId`. Admin dan lurah hanya boleh membaca data chat/laporan dari kelurahannya sendiri.
+
+Header yang dipakai untuk endpoint yang butuh login:
+
+```txt
+Authorization: Bearer <token>
+```
+
+## Enkripsi Data
+
+Data sensitif disimpan dalam bentuk terenkripsi di MySQL memakai AES-256-GCM:
+
+- nama user
+- alamat user
+- nomor telepon user
+- subject chat
+- isi pesan chat
+- nama pelapor aspirasi
+- alamat pelapor aspirasi
+- judul singkat aspirasi
+- deskripsi aspirasi
+- tanggapan aspirasi
+
+Password tidak dienkripsi, tetapi di-hash memakai `scrypt`, sehingga tidak bisa dibuka kembali.
 
 ## Endpoint Utama
 
@@ -122,6 +149,23 @@ Chatbot lokal sederhana:
 
 ```txt
 POST /api/chat
+```
+
+Auth:
+
+```txt
+POST /api/auth/register
+POST /api/auth/login
+```
+
+Kelurahan:
+
+```txt
+GET    /api/kelurahans
+GET    /api/kelurahans/:id
+POST   /api/kelurahans
+PUT    /api/kelurahans/:id
+DELETE /api/kelurahans/:id
 ```
 
 ## Endpoint CRUD User

@@ -1,5 +1,9 @@
 const db = require('../config/database')
+const encryption = require('../utils/encryption')
 const { buildUpdateQuery } = require('../utils/queryBuilder')
+
+const conversationEncryptedFields = ['subject', 'citizenName']
+const messageEncryptedFields = ['message', 'senderName']
 
 async function findAll(filters = {}) {
   const where = []
@@ -20,12 +24,19 @@ async function findAll(filters = {}) {
     params.push(filters.citizenId)
   }
 
+  if (filters.kelurahanId) {
+    where.push('c.kelurahan_id = ?')
+    params.push(filters.kelurahanId)
+  }
+
   const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : ''
 
   const [rows] = await db.query(
     `
       SELECT
         c.id,
+        c.kelurahan_id AS kelurahanId,
+        k.name AS kelurahanName,
         c.citizen_id AS citizenId,
         u.name AS citizenName,
         c.target_role AS targetRole,
@@ -35,6 +46,7 @@ async function findAll(filters = {}) {
         c.created_at AS createdAt,
         c.updated_at AS updatedAt
       FROM chat_conversations c
+      LEFT JOIN kelurahans k ON k.id = c.kelurahan_id
       LEFT JOIN users u ON u.id = c.citizen_id
       ${whereClause}
       ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
@@ -42,7 +54,7 @@ async function findAll(filters = {}) {
     params,
   )
 
-  return rows
+  return encryption.decryptRows(rows, conversationEncryptedFields)
 }
 
 async function findById(id) {
@@ -50,6 +62,8 @@ async function findById(id) {
     `
       SELECT
         c.id,
+        c.kelurahan_id AS kelurahanId,
+        k.name AS kelurahanName,
         c.citizen_id AS citizenId,
         u.name AS citizenName,
         c.target_role AS targetRole,
@@ -59,26 +73,29 @@ async function findById(id) {
         c.created_at AS createdAt,
         c.updated_at AS updatedAt
       FROM chat_conversations c
+      LEFT JOIN kelurahans k ON k.id = c.kelurahan_id
       LEFT JOIN users u ON u.id = c.citizen_id
       WHERE c.id = ?
     `,
     [id],
   )
 
-  return rows[0] || null
+  return encryption.decryptFields(rows[0] || null, conversationEncryptedFields)
 }
 
 async function create(conversation) {
+  const encryptedSubject = encryption.encryptText(conversation.subject)
   const [result] = await db.query(
     `
-      INSERT INTO chat_conversations (citizen_id, target_role, status, subject)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO chat_conversations (kelurahan_id, citizen_id, target_role, status, subject)
+      VALUES (?, ?, ?, ?, ?)
     `,
     [
+      conversation.kelurahanId || null,
       conversation.citizenId || null,
       conversation.targetRole || 'admin',
       conversation.status || 'waiting_response',
-      conversation.subject || null,
+      encryptedSubject || null,
     ],
   )
 
@@ -89,10 +106,11 @@ async function update(id, conversation) {
   const query = buildUpdateQuery(
     'chat_conversations',
     {
+      kelurahan_id: conversation.kelurahanId,
       citizen_id: conversation.citizenId,
       target_role: conversation.targetRole,
       status: conversation.status,
-      subject: conversation.subject,
+      subject: encryption.encryptText(conversation.subject),
     },
     id,
   )
@@ -110,12 +128,13 @@ async function remove(id) {
 }
 
 async function addMessage(message) {
+  const encryptedMessage = encryption.encryptText(message.message)
   const [result] = await db.query(
     `
       INSERT INTO chat_messages (conversation_id, sender_id, sender_role, message)
       VALUES (?, ?, ?, ?)
     `,
-    [message.conversationId, message.senderId || null, message.senderRole, message.message],
+    [message.conversationId, message.senderId || null, message.senderRole, encryptedMessage],
   )
 
   await db.query('UPDATE chat_conversations SET last_message_at = CURRENT_TIMESTAMP WHERE id = ?', [
@@ -146,7 +165,7 @@ async function findMessages(conversationId) {
     [conversationId],
   )
 
-  return rows
+  return encryption.decryptRows(rows, messageEncryptedFields)
 }
 
 async function findMessageById(id) {
@@ -167,13 +186,13 @@ async function findMessageById(id) {
     [id],
   )
 
-  return rows[0] || null
+  return encryption.decryptFields(rows[0] || null, messageEncryptedFields)
 }
 
 async function updateMessage(conversationId, messageId, payload) {
   const [result] = await db.query(
     'UPDATE chat_messages SET message = ?, is_read = COALESCE(?, is_read) WHERE id = ? AND conversation_id = ?',
-    [payload.message, payload.isRead ?? null, messageId, conversationId],
+    [encryption.encryptText(payload.message), payload.isRead ?? null, messageId, conversationId],
   )
 
   if (!result.affectedRows) {

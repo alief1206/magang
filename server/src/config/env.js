@@ -5,6 +5,8 @@ dotenv.config()
 module.exports = {
   port: process.env.PORT || 5000,
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  authTokenSecret: process.env.AUTH_TOKEN_SECRET || 'ganti-secret-token-ini',
+  dataEncryptionKey: process.env.DATA_ENCRYPTION_KEY || 'ganti-key-enkripsi-data-ini',
   database: {
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT || 3306),
