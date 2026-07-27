@@ -69,7 +69,7 @@ async function createAspiration(payload, user) {
     throw createApiError(errors.join(' '), 400)
   }
 
-  const imageMetadata = imageCompressionService.prepareImageMetadata(payload.image)
+  const imageMetadata = await imageCompressionService.storeImage(payload.image)
   const userKelurahanId = user && user.kelurahanId
   const kelurahanId = payload.kelurahanId || userKelurahanId
 
@@ -83,6 +83,10 @@ async function createAspiration(payload, user) {
 
   return aspirationModel.create({
     ...payload,
+    name: payload.name.trim(),
+    address: payload.address.trim(),
+    shortTitle: payload.shortTitle.trim(),
+    description: payload.description.trim(),
     userId: payload.userId || (user && user.role === 'warga' ? user.id : undefined),
     kelurahanId,
     ...imageMetadata,
@@ -103,10 +107,14 @@ async function updateAspiration(id, payload, user) {
   }
 
   const imageMetadata =
-    payload.image === undefined ? {} : imageCompressionService.prepareImageMetadata(payload.image)
+    payload.image === undefined ? {} : await imageCompressionService.storeImage(payload.image)
 
   return aspirationModel.update(id, {
     ...payload,
+    ...(payload.name !== undefined ? { name: payload.name.trim() } : {}),
+    ...(payload.address !== undefined ? { address: payload.address.trim() } : {}),
+    ...(payload.shortTitle !== undefined ? { shortTitle: payload.shortTitle.trim() } : {}),
+    ...(payload.description !== undefined ? { description: payload.description.trim() } : {}),
     ...imageMetadata,
   })
 }
@@ -114,6 +122,32 @@ async function updateAspiration(id, payload, user) {
 async function deleteAspiration(id, user) {
   await getAspirationById(id, user)
   await aspirationModel.remove(id)
+}
+
+async function forwardToLurah(id, user) {
+  const aspiration = await getAspirationById(id, user)
+
+  if (user.role !== 'admin') {
+    throw createApiError('Hanya admin yang dapat meneruskan aspirasi ke lurah.', 403)
+  }
+
+  if (aspiration.assignedToRole === 'lurah' && aspiration.status === 'diteruskan_ke_lurah') {
+    throw createApiError('Aspirasi sudah diteruskan ke lurah.', 400)
+  }
+
+  return aspirationModel.forwardToLurah({
+    aspirationId: id,
+    kelurahanId: aspiration.kelurahanId,
+    forwardedBy: user.id,
+  })
+}
+
+async function getLurahNotifications(user) {
+  if (!user || user.role !== 'lurah') {
+    throw createApiError('Akses hanya untuk lurah.', 403)
+  }
+
+  return aspirationModel.findNotificationsForLurah(user.kelurahanId)
 }
 
 async function addResponse(aspirationId, payload, user) {
@@ -177,6 +211,8 @@ module.exports = {
   createAspiration,
   updateAspiration,
   deleteAspiration,
+  forwardToLurah,
+  getLurahNotifications,
   addResponse,
   updateResponse,
   deleteResponse,

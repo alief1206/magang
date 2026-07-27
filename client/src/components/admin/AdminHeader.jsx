@@ -31,6 +31,27 @@ export default function AdminHeader({ toggleSidebar }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    if (!token) return;
+
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/aspirations/notifications/lurah`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((result) => {
+        if (!result?.data) return;
+        setNotifications(result.data.map((notification) => ({
+          id: notification.id,
+          title: 'Aspirasi Diteruskan',
+          desc: notification.message,
+          time: new Date(notification.createdAt).toLocaleString('id-ID'),
+          unread: !notification.isRead,
+        })));
+      })
+      .catch(() => {});
+  }, []);
+
   const handleLogout = () => {
     navigate('/admin/login');
   };

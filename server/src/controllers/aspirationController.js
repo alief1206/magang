@@ -66,6 +66,28 @@ async function deleteAspiration(req, res, next) {
   }
 }
 
+async function forwardToLurah(req, res, next) {
+  try {
+    const aspiration = await aspirationService.forwardToLurah(req.params.id, req.user)
+
+    res.json({
+      message: 'Aspirasi berhasil diteruskan ke Lurah.',
+      data: aspiration,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function getLurahNotifications(req, res, next) {
+  try {
+    const notifications = await aspirationService.getLurahNotifications(req.user)
+    res.json({ data: notifications })
+  } catch (error) {
+    next(error)
+  }
+}
+
 async function addResponse(req, res, next) {
   try {
     const response = await aspirationService.addResponse(req.params.id, req.body, req.user)
@@ -115,6 +137,8 @@ module.exports = {
   createAspiration,
   updateAspiration,
   deleteAspiration,
+  forwardToLurah,
+  getLurahNotifications,
   addResponse,
   updateResponse,
   deleteResponse,

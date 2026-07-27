@@ -1,17 +1,69 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
 
 export default function AspirasiWarga() {
   const [activeTab, setActiveTab] = useState('semua');
+  const [forwardingId, setForwardingId] = useState(null);
+  const [forwardError, setForwardError] = useState('');
   
-  const aspirasiData = [
+  const [aspirasiData, setAspirasiData] = useState([
     { id: 1, title: "Laporan Jalan Berlubang", phone: "+62 812345678", name: "Dimas Setya", status: "Diterima", image: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=150&h=100" },
     { id: 2, title: "Permohonan Mediasi Tetangga", phone: "+62 812345678", name: "Udin", status: "Diterima", image: "https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=150&h=100" },
     { id: 3, title: "Lampu Jalan Mati", phone: "+62 812345678", name: "Awaludin", status: "Diterima", image: "https://images.unsplash.com/photo-1494522855154-9297ac14b55f?auto=format&fit=crop&q=80&w=150&h=100" },
     { id: 4, title: "Parkir Liar", phone: "+62 812345678", name: "Komarudin", status: "Diterima", image: "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&q=80&w=150&h=100" },
     { id: 5, title: "Sampah Menumpuk", phone: "+62 812345678", name: "Jamaludin", status: "Diterima", image: "https://images.unsplash.com/photo-1605600659908-0ef719419d41?auto=format&fit=crop&q=80&w=150&h=100" },
-  ];
+  ]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    if (!token) return;
+
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/aspirations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((result) => {
+        if (!result?.data) return;
+        setAspirasiData(result.data.map((item) => ({
+          id: item.id,
+          title: item.shortTitle,
+          phone: item.address,
+          name: item.name,
+          status: item.status === 'diteruskan_ke_lurah' ? 'Diteruskan ke Lurah' : item.status,
+          image: item.imagePath ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.imagePath}` : null,
+          forwarded: item.assignedToRole === 'lurah',
+        })));
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleForwardToLurah = async (id) => {
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    if (!token) {
+      setForwardError('Silakan login sebagai Admin untuk meneruskan aspirasi.');
+      return;
+    }
+
+    setForwardingId(id);
+    setForwardError('');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/aspirations/${id}/forward-to-lurah`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || 'Aspirasi belum dapat diteruskan.');
+
+      setAspirasiData((items) => items.map((item) => item.id === id
+        ? { ...item, status: 'Diteruskan ke Lurah', forwarded: true }
+        : item));
+    } catch (error) {
+      setForwardError(error.message || 'Aspirasi belum dapat diteruskan.');
+    } finally {
+      setForwardingId(null);
+    }
+  };
 
   return (
     <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full flex flex-col h-full">
@@ -51,6 +103,7 @@ export default function AspirasiWarga() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+          {forwardError && <p className="text-sm text-red-600">{forwardError}</p>}
           {aspirasiData.map((item, index) => (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -60,7 +113,7 @@ export default function AspirasiWarga() {
               className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white rounded-2xl border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all cursor-pointer gap-4"
             >
               <div className="flex items-center gap-4">
-                <img src={item.image} alt={item.title} className="w-24 h-16 object-cover rounded-xl shrink-0" />
+                {item.image ? <img src={item.image} alt={item.title} className="w-24 h-16 object-cover rounded-xl shrink-0" /> : <div className="w-24 h-16 rounded-xl shrink-0 bg-slate-100 flex items-center justify-center text-slate-400"><Icon icon="mdi:image-outline" className="w-7 h-7" /></div>}
                 <div>
                   <h4 className="font-bold text-[#112A46] text-[15px] mb-1">{item.title}</h4>
                   <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
@@ -69,8 +122,20 @@ export default function AspirasiWarga() {
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-2 rounded-full bg-emerald-500 text-white text-xs font-bold sm:mr-2 self-start sm:self-center">
-                {item.status}
+              <div className="flex items-center gap-2 self-start sm:self-center sm:mr-2">
+                <div className="px-6 py-2 rounded-full bg-emerald-500 text-white text-xs font-bold">
+                  {item.status}
+                </div>
+                {!item.forwarded && (
+                  <button
+                    type="button"
+                    onClick={(event) => { event.stopPropagation(); handleForwardToLurah(item.id); }}
+                    disabled={forwardingId === item.id}
+                    className="px-4 py-2 rounded-full bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-xs font-bold transition-colors"
+                  >
+                    {forwardingId === item.id ? 'Meneruskan...' : 'Teruskan ke Lurah'}
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}

@@ -6,26 +6,124 @@ export default function KotakAspirasi() {
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
+    nama: '',
+    alamat: '',
     kategori: '',
     judul: '',
     pesan: '',
+    foto: null,
     isAnonim: false
   });
-  
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const validateField = (name, value) => {
+    const trimmedValue = value.trim();
+
+    if (name === 'nama') {
+      if (!trimmedValue) return 'Nama wajib diisi.';
+      if (!/^[\p{L} ]+$/u.test(value)) return 'Nama hanya boleh terdiri dari huruf dan spasi.';
+    }
+
+    if (name === 'alamat') {
+      if (!trimmedValue) return 'Alamat wajib diisi.';
+      if (!/^[\p{L}\p{N} ,./-]+$/u.test(value)) return 'Alamat mengandung karakter yang tidak diperbolehkan.';
+    }
+
+    if (name === 'kategori' && !value) return 'Kategori wajib diisi.';
+    if (name === 'judul' && !trimmedValue) return 'Judul singkat wajib diisi.';
+    if (name === 'pesan' && !trimmedValue) return 'Detail aspirasi wajib diisi.';
+
+    return '';
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    const nextValue = type === 'checkbox' ? checked : value;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: nextValue
     }));
+
+    if (type !== 'checkbox') {
+      setErrors(prev => ({ ...prev, [name]: validateField(name, nextValue) }));
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handlePhotoChange = (e) => {
+    const photo = e.target.files?.[0] || null;
+    let photoError = '';
+
+    if (photo && !['image/jpeg', 'image/png'].includes(photo.type)) {
+      photoError = 'Format foto harus JPG, JPEG, atau PNG.';
+    } else if (photo && photo.size > 20 * 1024 * 1024) {
+      photoError = 'Ukuran foto maksimal 20 MB.';
+    }
+
+    setFormData(prev => ({ ...prev, foto: photoError ? null : photo }));
+    setErrors(prev => ({ ...prev, foto: photoError }));
+    if (photoError) e.target.value = '';
+  };
+
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(new Error('Foto tidak dapat dibaca.'));
+    reader.readAsDataURL(file);
+  });
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Data Aspirasi Terkirim:", formData);
-    setIsSubmitted(true);
+    const nextErrors = Object.fromEntries(
+      ['nama', 'alamat', 'kategori', 'judul', 'pesan'].map((field) => [
+        field,
+        validateField(field, formData[field]),
+      ]),
+    );
+    setErrors(nextErrors);
+    setSubmitError('');
+
+    if (Object.values(nextErrors).some(Boolean) || errors.foto) return;
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      const image = formData.foto ? {
+        data: await fileToBase64(formData.foto),
+        originalName: formData.foto.name,
+        mimeType: formData.foto.type,
+        sizeBytes: formData.foto.size,
+      } : undefined;
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/aspirations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name: formData.nama.trim(),
+          address: formData.alamat.trim(),
+          category: formData.kategori,
+          shortTitle: formData.judul.trim(),
+          description: formData.pesan.trim(),
+          image,
+          isAnonymous: formData.isAnonim,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Aspirasi belum dapat dikirim. Silakan coba lagi.');
+      }
+
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmitError(error.message || 'Aspirasi belum dapat dikirim. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -64,6 +162,44 @@ export default function KotakAspirasi() {
               </div>
 
               <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#112A46]">Nama Lengkap <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                    <Icon icon="mdi:account-outline" className="w-6 h-6" />
+                  </div>
+                  <input
+                    type="text"
+                    name="nama"
+                    value={formData.nama}
+                    onChange={handleChange}
+                    placeholder="Contoh: Budi Santoso"
+                    required
+                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] ${errors.nama ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
+                  />
+                </div>
+                {errors.nama && <p className="text-sm text-red-600">{errors.nama}</p>}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#112A46]">Alamat Lengkap <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                    <Icon icon="mdi:map-marker-outline" className="w-6 h-6" />
+                  </div>
+                  <input
+                    type="text"
+                    name="alamat"
+                    value={formData.alamat}
+                    onChange={handleChange}
+                    placeholder="Contoh: Jl. Melati No. 10"
+                    required
+                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] ${errors.alamat ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
+                  />
+                </div>
+                {errors.alamat && <p className="text-sm text-red-600">{errors.alamat}</p>}
+              </div>
+
+              <div className="flex flex-col gap-3">
                 <label className="text-[15px] font-bold text-[#112A46]">Kategori Usulan <span className="text-red-500">*</span></label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
@@ -74,7 +210,7 @@ export default function KotakAspirasi() {
                     value={formData.kategori}
                     onChange={handleChange}
                     required
-                    className="w-full pl-14 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700 font-semibold text-[15px] appearance-none cursor-pointer"
+                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] appearance-none cursor-pointer ${errors.kategori ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
                   >
                     <option value="" disabled>Pilih kategori...</option>
                     <option value="Kualitas Pelayanan Administrasi">Kualitas Pelayanan Administrasi</option>
@@ -82,12 +218,14 @@ export default function KotakAspirasi() {
                     <option value="Kegiatan Sosial & Kesehatan">Sosial & Kesehatan (Posyandu, dll)</option>
                     <option value="Inovasi & Kegiatan Pemuda">Inovasi & Kegiatan Pemuda</option>
                     <option value="Ketertiban & Keamanan">Ketertiban & Keamanan</option>
+                    <option value="Infrastruktur">Infrastruktur</option>
                     <option value="Lainnya">Lainnya</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none text-slate-400">
                     <Icon icon="mdi:chevron-down" className="w-6 h-6" />
                   </div>
                 </div>
+                {errors.kategori && <p className="text-sm text-red-600">{errors.kategori}</p>}
               </div>
 
               <div className="flex flex-col gap-3">
@@ -103,9 +241,10 @@ export default function KotakAspirasi() {
                     onChange={handleChange}
                     placeholder="Contoh: Pengadaan Bak Sampah"
                     required
-                    className="w-full pl-14 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700 font-semibold text-[15px]"
+                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] ${errors.judul ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
                   />
                 </div>
+                {errors.judul && <p className="text-sm text-red-600">{errors.judul}</p>}
               </div>
 
               <div className="md:col-span-2 flex flex-col gap-3 mt-2">
@@ -117,8 +256,22 @@ export default function KotakAspirasi() {
                   placeholder="Ceritakan lebih detail mengenai gagasan atau evaluasi Anda di sini..."
                   required
                   rows="6"
-                  className="w-full p-6 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700 font-medium text-[15px] resize-none leading-relaxed"
+                  className={`w-full p-6 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-medium text-[15px] resize-none leading-relaxed ${errors.pesan ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
                 ></textarea>
+                {errors.pesan && <p className="text-sm text-red-600">{errors.pesan}</p>}
+              </div>
+
+              <div className="md:col-span-2 flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#112A46]">Upload Bukti Foto <span className="text-slate-400 font-medium">(Opsional)</span></label>
+                <input
+                  type="file"
+                  name="foto"
+                  accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                  onChange={handlePhotoChange}
+                  className={`w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-medium text-[15px] ${errors.foto ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
+                />
+                <p className="text-sm text-slate-500">Format JPG, JPEG, atau PNG. Maksimal 20 MB.</p>
+                {errors.foto && <p className="text-sm text-red-600">{errors.foto}</p>}
               </div>
 
               <div className="md:col-span-2 flex items-start gap-4 p-5 bg-[#F0F6FF] rounded-2xl border border-blue-100">
@@ -136,11 +289,14 @@ export default function KotakAspirasi() {
                 </label>
               </div>
 
+              {submitError && <p className="md:col-span-2 text-sm text-red-600 text-center">{submitError}</p>}
+
               <button 
                 type="submit" 
+                disabled={isSubmitting}
                 className="md:col-span-2 w-full bg-gradient-to-r from-[#112A46] to-[#1A3D63] hover:from-blue-900 hover:to-blue-800 text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-2 transition-all mt-4 shadow-[0_10px_20px_rgba(17,42,70,0.2)] hover:shadow-[0_15px_30px_rgba(17,42,70,0.3)] hover:-translate-y-1 text-[16px]"
               >
-                Kirim Aspirasi Sekarang <Icon icon="mdi:send-check" className="w-6 h-6" />
+                {isSubmitting ? 'Mengirim...' : 'Kirim Aspirasi Sekarang'} <Icon icon="mdi:send-check" className="w-6 h-6" />
               </button>
             </form>
 

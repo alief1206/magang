@@ -191,6 +191,55 @@ async function remove(id) {
   return result.affectedRows > 0
 }
 
+async function forwardToLurah({ aspirationId, kelurahanId, forwardedBy }) {
+  const connection = await db.getConnection()
+
+  try {
+    await connection.beginTransaction()
+    await connection.query(
+      `UPDATE citizen_aspirations
+       SET status = 'diteruskan_ke_lurah', assigned_to_role = 'lurah'
+       WHERE id = ?`,
+      [aspirationId],
+    )
+    await connection.query(
+      `INSERT INTO aspiration_forwarding_histories (aspiration_id, forwarded_by, recipient_role)
+       VALUES (?, ?, 'lurah')`,
+      [aspirationId, forwardedBy],
+    )
+    await connection.query(
+      `INSERT INTO aspiration_notifications (aspiration_id, kelurahan_id, recipient_role, message)
+       VALUES (?, ?, 'lurah', 'Aspirasi baru telah diteruskan oleh Admin.')`,
+      [aspirationId, kelurahanId],
+    )
+    await connection.commit()
+  } catch (error) {
+    await connection.rollback()
+    throw error
+  } finally {
+    connection.release()
+  }
+
+  return findById(aspirationId)
+}
+
+async function findNotificationsForLurah(kelurahanId) {
+  const [rows] = await db.query(
+    `SELECT
+       id,
+       aspiration_id AS aspirationId,
+       message,
+       is_read AS isRead,
+       created_at AS createdAt
+     FROM aspiration_notifications
+     WHERE kelurahan_id = ? AND recipient_role = 'lurah'
+     ORDER BY created_at DESC`,
+    [kelurahanId],
+  )
+
+  return rows
+}
+
 async function findResponses(aspirationId) {
   const [rows] = await db.query(
     `
@@ -298,6 +347,8 @@ module.exports = {
   create,
   update,
   remove,
+  forwardToLurah,
+  findNotificationsForLurah,
   findResponses,
   addResponse,
   updateResponse,
