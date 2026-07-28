@@ -1,5 +1,7 @@
 const conversationModel = require('../models/conversationModel')
+const kelurahanModel = require('../models/kelurahanModel')
 const createApiError = require('../utils/apiError')
+const phoneUtils = require('../utils/phone')
 const conversationValidator = require('../validators/conversationValidator')
 
 function isStaff(user) {
@@ -26,7 +28,8 @@ function getScopedFilters(filters, user) {
 
 function ensureCanAccessConversation(conversation, user) {
   if (!user) {
-    throw createApiError('Login terlebih dahulu.', 401)
+    // Memperbolehkan akses guest jika mereka mengetahui ID percakapan
+    return
   }
 
   if (isStaff(user) && Number(conversation.kelurahanId) === Number(user.kelurahanId)) {
@@ -82,6 +85,7 @@ async function createConversation(payload, user) {
     ...payload,
     kelurahanId,
     citizenId: payload.citizenId || (user && user.role === 'warga' ? user.id : undefined),
+    guestName: !user ? payload.guestName : undefined,
   })
 
   if (payload.message) {
@@ -98,6 +102,7 @@ async function createConversation(payload, user) {
     await conversationModel.addMessage({
       conversationId: conversation.id,
       senderId: payload.senderId || conversation.citizenId || (user && user.id),
+      guestSenderName: !user ? payload.guestName : undefined,
       senderRole: payload.senderRole || (user && user.role) || 'warga',
       message: payload.message,
     })
@@ -144,6 +149,7 @@ async function addMessage(conversationId, payload, user) {
   const message = await conversationModel.addMessage({
     conversationId,
     senderId: messagePayload.senderId,
+    guestSenderName: !user ? payload.guestName : undefined,
     senderRole: messagePayload.senderRole,
     message: messagePayload.message,
   })
@@ -182,6 +188,77 @@ async function deleteMessage(conversationId, messageId, user) {
   }
 }
 
+async function forwardToLurah(conversationId, payload, user) {
+  const conversation = await getConversationById(conversationId, user)
+  const kelurahan = await kelurahanModel.findById(conversation.kelurahanId)
+  const lurahWhatsappNumber = payload.lurahWhatsappNumber || kelurahan.lurahWhatsappNumber
+  const normalizedPhone = phoneUtils.normalizePhoneNumber(lurahWhatsappNumber)
+
+  if (!normalizedPhone) {
+    throw createApiError('Nomor WhatsApp lurah belum diisi di data kelurahan.', 400)
+  }
+
+  const forwardMessage =
+    payload.message ||
+    [
+      'Assalamualaikum Pak Lurah, mohon tanggapan untuk chat warga.',
+      '',
+      `Kode chat: CHAT-${conversation.id}`,
+      `Kelurahan: ${conversation.kelurahanName || '-'}`,
+      `Subjek: ${conversation.subject || '-'}`,
+      '',
+      'Balas melalui WhatsApp dengan format:',
+      `CHAT-${conversation.id}: tulis balasan di sini`,
+    ].join('\n')
+
+  await conversationModel.markForwardedToLurah(conversation.id, normalizedPhone)
+
+  return {
+    conversationId: conversation.id,
+    lurahWhatsappNumber: normalizedPhone,
+    whatsappMessage: forwardMessage,
+    whatsappUrl: phoneUtils.createWhatsappUrl(normalizedPhone, forwardMessage),
+  }
+}
+
+async function addLurahWhatsappReply(conversationId, payload) {
+  const conversation = await conversationModel.findById(conversationId)
+
+  if (!conversation) {
+    throw createApiError('Percakapan tidak ditemukan.', 404)
+  }
+
+  const senderPhone = phoneUtils.normalizePhoneNumber(payload.fromPhone)
+  const forwardedPhone = phoneUtils.normalizePhoneNumber(conversation.forwardedToLurahPhone)
+
+  if (!forwardedPhone) {
+    throw createApiError('Chat belum diteruskan ke nomor WhatsApp lurah.', 400)
+  }
+
+  if (!senderPhone) {
+    throw createApiError('Nomor pengirim WhatsApp wajib dikirim oleh webhook.', 400)
+  }
+
+  if (senderPhone !== forwardedPhone) {
+    throw createApiError('Nomor WhatsApp pengirim tidak sesuai dengan nomor lurah tujuan.', 403)
+  }
+
+  const message = await conversationModel.addMessage({
+    conversationId,
+    senderId: null,
+    senderRole: 'lurah',
+    message: payload.message,
+    source: 'whatsapp',
+    externalMessageId: payload.messageId,
+  })
+
+  await conversationModel.update(conversationId, {
+    status: 'answered',
+  })
+
+  return message
+}
+
 module.exports = {
   getConversations,
   getConversationById,
@@ -191,4 +268,6 @@ module.exports = {
   addMessage,
   updateMessage,
   deleteMessage,
+  forwardToLurah,
+  addLurahWhatsappReply,
 }

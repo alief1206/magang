@@ -7,6 +7,7 @@ const healthRoutes = require('./healthRoutes')
 const kelurahanRoutes = require('./kelurahanRoutes')
 const rootRoutes = require('./rootRoutes')
 const userRoutes = require('./userRoutes')
+const whatsappRoutes = require('./whatsappRoutes')
 
 const router = express.Router()
 
@@ -18,5 +19,6 @@ router.use('/api/chats', conversationRoutes)
 router.use('/api/aspirations', aspirationRoutes)
 router.use('/api/kelurahans', kelurahanRoutes)
 router.use('/api/users', userRoutes)
+router.use('/api/whatsapp', whatsappRoutes)
 
 module.exports = router

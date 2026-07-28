@@ -1,28 +1,62 @@
 const db = require('../config/database')
+const encryption = require('../utils/encryption')
 const { buildUpdateQuery } = require('../utils/queryBuilder')
+
+const encryptedFields = ['lurahName', 'lurahWhatsappNumber']
 
 async function findAll() {
   const [rows] = await db.query(
-    'SELECT id, name, code, created_at AS createdAt, updated_at AS updatedAt FROM kelurahans ORDER BY name ASC',
+    `
+      SELECT
+        id,
+        name,
+        code,
+        lurah_name AS lurahName,
+        lurah_whatsapp_number AS lurahWhatsappNumber,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM kelurahans
+      ORDER BY name ASC
+    `,
   )
 
-  return rows
+  return encryption.decryptRows(rows, encryptedFields)
 }
 
 async function findById(id) {
   const [rows] = await db.query(
-    'SELECT id, name, code, created_at AS createdAt, updated_at AS updatedAt FROM kelurahans WHERE id = ?',
+    `
+      SELECT
+        id,
+        name,
+        code,
+        lurah_name AS lurahName,
+        lurah_whatsapp_number AS lurahWhatsappNumber,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM kelurahans
+      WHERE id = ?
+    `,
     [id],
   )
 
-  return rows[0] || null
+  return encryption.decryptFields(rows[0] || null, encryptedFields)
 }
 
 async function create(kelurahan) {
-  const [result] = await db.query('INSERT INTO kelurahans (name, code) VALUES (?, ?)', [
-    kelurahan.name,
-    kelurahan.code || null,
-  ])
+  const encryptedKelurahan = encryption.encryptFields(kelurahan, encryptedFields)
+  const [result] = await db.query(
+    `
+      INSERT INTO kelurahans (name, code, lurah_name, lurah_whatsapp_number)
+      VALUES (?, ?, ?, ?)
+    `,
+    [
+      kelurahan.name,
+      kelurahan.code || null,
+      encryptedKelurahan.lurahName || null,
+      encryptedKelurahan.lurahWhatsappNumber || null,
+    ],
+  )
 
   return findById(result.insertId)
 }
@@ -33,6 +67,8 @@ async function update(id, kelurahan) {
     {
       name: kelurahan.name,
       code: kelurahan.code,
+      lurah_name: encryption.encryptText(kelurahan.lurahName),
+      lurah_whatsapp_number: encryption.encryptText(kelurahan.lurahWhatsappNumber),
     },
     id,
   )

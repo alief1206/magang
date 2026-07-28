@@ -1,12 +1,13 @@
 function validateRegisterPayload(payload) {
   const errors = []
-  const roles = ['warga', 'admin', 'lurah']
 
   if (!payload.name) errors.push('Nama wajib diisi.')
   if (!payload.email) errors.push('Email wajib diisi.')
   if (!payload.password) errors.push('Password wajib diisi.')
   if (!payload.kelurahanId) errors.push('Kelurahan wajib dipilih.')
-  if (payload.role && !roles.includes(payload.role)) errors.push('Role user tidak valid.')
+  if (payload.role && payload.role !== 'warga') {
+    errors.push('Register publik hanya boleh membuat akun warga.')
+  }
 
   return errors
 }

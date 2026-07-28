@@ -66,6 +66,19 @@ async function deleteConversation(req, res, next) {
   }
 }
 
+async function forwardToLurah(req, res, next) {
+  try {
+    const result = await conversationService.forwardToLurah(req.params.id, req.body, req.user)
+
+    res.json({
+      message: 'Link WhatsApp lurah berhasil dibuat.',
+      data: result,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 async function addMessage(req, res, next) {
   try {
     const message = await conversationService.addMessage(req.params.id, req.body, req.user)
@@ -115,6 +128,7 @@ module.exports = {
   createConversation,
   updateConversation,
   deleteConversation,
+  forwardToLurah,
   addMessage,
   updateMessage,
   deleteMessage,

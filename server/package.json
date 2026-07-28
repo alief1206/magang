@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "data:encrypt": "node src/database/encryptExistingData.js",
     "db:migrate": "node src/database/migrate.js",
     "dev": "nodemon index.js",
     "start": "node index.js"

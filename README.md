@@ -78,6 +78,7 @@ DB_PASSWORD=
 DB_NAME=desa_digital_db
 AUTH_TOKEN_SECRET=ganti-secret-token-minimal-32-karakter
 DATA_ENCRYPTION_KEY=ganti-key-enkripsi-data-minimal-32-karakter
+WHATSAPP_WEBHOOK_SECRET=ganti-secret-webhook-whatsapp
 ```
 
 ## Database MySQL
@@ -112,7 +113,7 @@ Middleware admin sudah disiapkan di:
 server/src/middlewares/adminMiddleware.js
 ```
 
-Token login sudah berisi `id`, `role`, dan `kelurahanId`. Admin dan lurah hanya boleh membaca data chat/laporan dari kelurahannya sendiri.
+Token login sudah berisi `id`, `role`, dan `kelurahanId`. Untuk alur saat ini, warga tidak perlu login untuk mengirim aspirasi. Login dipakai untuk admin yang mengelola dashboard.
 
 Header yang dipakai untuk endpoint yang butuh login:
 
@@ -134,8 +135,17 @@ Data sensitif disimpan dalam bentuk terenkripsi di MySQL memakai AES-256-GCM:
 - judul singkat aspirasi
 - deskripsi aspirasi
 - tanggapan aspirasi
+- nomor WhatsApp pengirim aspirasi
+- nomor WhatsApp lurah
 
 Password tidak dienkripsi, tetapi di-hash memakai `scrypt`, sehingga tidak bisa dibuka kembali.
+
+Jika database sudah berisi data lama sebelum fitur enkripsi dibuat, jalankan:
+
+```powershell
+cd C:\alief\magang\server
+npm.cmd run data:encrypt
+```
 
 ## Endpoint Utama
 
@@ -168,6 +178,8 @@ PUT    /api/kelurahans/:id
 DELETE /api/kelurahans/:id
 ```
 
+Data kelurahan bisa menyimpan `lurahName` dan `lurahWhatsappNumber`. Nomor ini dipakai saat admin meneruskan chat website ke WhatsApp lurah.
+
 ## Endpoint CRUD User
 
 ```txt
@@ -186,12 +198,19 @@ POST   /api/chats
 GET    /api/chats/:id
 PUT    /api/chats/:id
 DELETE /api/chats/:id
+POST   /api/chats/:id/forward-to-lurah
 POST   /api/chats/:id/messages
 PUT    /api/chats/:id/messages/:messageId
 DELETE /api/chats/:id/messages/:messageId
 ```
 
-Chat ini disiapkan untuk menyimpan percakapan warga yang perlu dibalas oleh admin atau lurah.
+Chat di dashboard hanya dikelola admin. Jika admin meneruskan chat ke lurah, endpoint `forward-to-lurah` akan membuat link WhatsApp berisi format balasan:
+
+```txt
+CHAT-1: tulis balasan di sini
+```
+
+Balasan lurah dari WhatsApp bisa masuk kembali ke chat website melalui webhook WhatsApp.
 
 ## Endpoint CRUD Aspirasi Warga
 
@@ -205,6 +224,19 @@ POST   /api/aspirations/:id/responses
 PUT    /api/aspirations/:id/responses/:responseId
 DELETE /api/aspirations/:id/responses/:responseId
 ```
+
+Alur warga:
+
+- Warga tidak perlu login.
+- Warga mengisi data diri dari pop-up/form.
+- Front-end mengirim data ke `POST /api/aspirations`.
+- Field minimal: `kelurahanId`, `name`, `address`, `category`, `shortTitle`, `description`.
+
+Alur admin:
+
+- Admin login.
+- Admin hanya melihat aspirasi sesuai `kelurahanId` di token login.
+- Admin bisa mengubah status, menghapus, dan memberi tanggapan.
 
 Data aspirasi warga yang disiapkan:
 
@@ -234,6 +266,45 @@ server/src/services/imageCompressionService.js
 ```
 
 Nanti fungsi upload dan kompres gambar bisa dikembangkan setelah alur form aspirasi di front-end dibuat.
+
+## WhatsApp Webhook
+
+Endpoint webhook yang disiapkan:
+
+```txt
+POST /api/whatsapp/webhook/aspirations
+POST /api/whatsapp/webhook/chat-replies
+```
+
+Header webhook:
+
+```txt
+x-webhook-secret: isi-sama-dengan-WHATSAPP_WEBHOOK_SECRET
+```
+
+Contoh payload aspirasi dari WhatsApp:
+
+```json
+{
+  "kelurahanId": 1,
+  "fromName": "Budi",
+  "fromPhone": "081234567890",
+  "messageId": "wa-msg-1",
+  "message": "Nama: Budi\nAlamat: RT 01/RW 02\nKategori: Jalan\nJudul: Jalan rusak\nDeskripsi: Jalan depan balai berlubang"
+}
+```
+
+Contoh payload balasan lurah dari WhatsApp:
+
+```json
+{
+  "fromPhone": "081234567891",
+  "messageId": "wa-reply-1",
+  "message": "CHAT-1: Baik, akan kami tindaklanjuti."
+}
+```
+
+Catatan: agar pesan WhatsApp benar-benar masuk otomatis, perlu WhatsApp Business API atau provider WhatsApp yang meneruskan pesan masuk ke webhook ini.
 
 ## Catatan Development
 

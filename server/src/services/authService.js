@@ -36,7 +36,7 @@ async function register(payload) {
   const user = await userModel.create({
     ...payload,
     password: hashedPassword,
-    role: payload.role || 'warga',
+    role: 'warga',
   })
 
   return createAuthResponse(user)

@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
   target_role ENUM('admin', 'lurah') NOT NULL DEFAULT 'admin',
   status ENUM('waiting_response', 'answered', 'closed') NOT NULL DEFAULT 'waiting_response',
   subject TEXT NULL,
+  forwarded_to_lurah_phone TEXT NULL,
+  forwarded_to_lurah_at TIMESTAMP NULL DEFAULT NULL,
   last_message_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -26,6 +28,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   sender_id INT NULL,
   sender_role ENUM('warga', 'admin', 'lurah', 'system') NOT NULL,
   message TEXT NOT NULL,
+  source ENUM('web', 'whatsapp') NOT NULL DEFAULT 'web',
+  external_message_id VARCHAR(150) NULL,
   is_read TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -37,5 +41,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     ON DELETE SET NULL,
   INDEX idx_chat_messages_conversation (conversation_id),
   INDEX idx_chat_messages_sender (sender_id),
+  INDEX idx_chat_messages_source (source),
+  INDEX idx_chat_messages_external_message_id (external_message_id),
   INDEX idx_chat_messages_sender_role (sender_role)
 );

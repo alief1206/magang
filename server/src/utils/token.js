@@ -35,8 +35,13 @@ function verifyToken(token) {
   }
 
   const expectedSignature = sign(`${header}.${body}`)
+  const signatureBuffer = Buffer.from(signature)
+  const expectedSignatureBuffer = Buffer.from(expectedSignature)
 
-  if (signature !== expectedSignature) {
+  if (
+    signatureBuffer.length !== expectedSignatureBuffer.length ||
+    !crypto.timingSafeEqual(signatureBuffer, expectedSignatureBuffer)
+  ) {
     throw new Error('Token tidak valid.')
   }
 

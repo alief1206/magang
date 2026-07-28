@@ -2,7 +2,13 @@ const db = require('../config/database')
 const encryption = require('../utils/encryption')
 const { buildUpdateQuery } = require('../utils/queryBuilder')
 
-const aspirationEncryptedFields = ['name', 'address', 'shortTitle', 'description']
+const aspirationEncryptedFields = [
+  'name',
+  'address',
+  'shortTitle',
+  'description',
+  'whatsappSenderPhone',
+]
 const responseEncryptedFields = ['response', 'responderName']
 
 function decryptAspiration(aspiration) {
@@ -59,6 +65,9 @@ async function findAll(filters = {}) {
         a.image_path AS imagePath,
         a.compressed_image_path AS compressedImagePath,
         a.compression_status AS compressionStatus,
+        a.source,
+        a.whatsapp_sender_phone AS whatsappSenderPhone,
+        a.whatsapp_message_id AS whatsappMessageId,
         a.status,
         a.assigned_to_role AS assignedToRole,
         a.created_at AS createdAt,
@@ -94,6 +103,9 @@ async function findById(id) {
         a.compressed_image_path AS compressedImagePath,
         a.compressed_image_size_bytes AS compressedImageSizeBytes,
         a.compression_status AS compressionStatus,
+        a.source,
+        a.whatsapp_sender_phone AS whatsappSenderPhone,
+        a.whatsapp_message_id AS whatsappMessageId,
         a.status,
         a.assigned_to_role AS assignedToRole,
         a.created_at AS createdAt,
@@ -127,10 +139,13 @@ async function create(aspiration) {
         compressed_image_path,
         compressed_image_size_bytes,
         compression_status,
+        source,
+        whatsapp_sender_phone,
+        whatsapp_message_id,
         status,
         assigned_to_role
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       aspiration.userId || null,
@@ -147,6 +162,9 @@ async function create(aspiration) {
       aspiration.compressedImagePath || null,
       aspiration.compressedImageSizeBytes || null,
       aspiration.compressionStatus || 'not_needed',
+      aspiration.source || 'web',
+      encryptedAspiration.whatsappSenderPhone || null,
+      aspiration.whatsappMessageId || null,
       aspiration.status || 'baru',
       aspiration.assignedToRole || 'admin',
     ],
@@ -173,6 +191,9 @@ async function update(id, aspiration) {
       compressed_image_path: aspiration.compressedImagePath,
       compressed_image_size_bytes: aspiration.compressedImageSizeBytes,
       compression_status: aspiration.compressionStatus,
+      source: aspiration.source,
+      whatsapp_sender_phone: encryption.encryptText(aspiration.whatsappSenderPhone),
+      whatsapp_message_id: aspiration.whatsappMessageId,
       status: aspiration.status,
       assigned_to_role: aspiration.assignedToRole,
     },
@@ -201,6 +222,8 @@ async function findResponses(aspirationId) {
         u.name AS responderName,
         r.responder_role AS responderRole,
         r.response,
+        r.source,
+        r.external_message_id AS externalMessageId,
         r.created_at AS createdAt,
         r.updated_at AS updatedAt
       FROM aspiration_responses r
@@ -223,6 +246,8 @@ async function findResponseById(id) {
         responder_id AS responderId,
         responder_role AS responderRole,
         response,
+        source,
+        external_message_id AS externalMessageId,
         created_at AS createdAt,
         updated_at AS updatedAt
       FROM aspiration_responses
@@ -238,14 +263,23 @@ async function addResponse(response) {
   const encryptedResponse = encryption.encryptFields(response, responseEncryptedFields)
   const [result] = await db.query(
     `
-      INSERT INTO aspiration_responses (aspiration_id, responder_id, responder_role, response)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO aspiration_responses (
+        aspiration_id,
+        responder_id,
+        responder_role,
+        response,
+        source,
+        external_message_id
+      )
+      VALUES (?, ?, ?, ?, ?, ?)
     `,
     [
       response.aspirationId,
       response.responderId || null,
       response.responderRole,
       encryptedResponse.response,
+      response.source || 'web',
+      response.externalMessageId || null,
     ],
   )
 
@@ -264,13 +298,17 @@ async function updateResponse(aspirationId, responseId, payload) {
       UPDATE aspiration_responses
       SET responder_id = COALESCE(?, responder_id),
           responder_role = COALESCE(?, responder_role),
-          response = ?
+          response = ?,
+          source = COALESCE(?, source),
+          external_message_id = COALESCE(?, external_message_id)
       WHERE id = ? AND aspiration_id = ?
     `,
     [
       payload.responderId ?? null,
       payload.responderRole ?? null,
       encryptedPayload.response,
+      payload.source ?? null,
+      payload.externalMessageId ?? null,
       responseId,
       aspirationId,
     ],

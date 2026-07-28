@@ -8,11 +8,38 @@ import admin from "../../assets/images/admin.png";
 
 export default function LoginAdmin() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    navigate('/admin/dashboard'); 
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Login gagal. Periksa email dan password.');
+      }
+
+      localStorage.setItem('adminToken', data.data.token);
+      localStorage.setItem('adminUser', JSON.stringify(data.data.user));
+      navigate('/admin/dashboard');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -88,6 +115,8 @@ export default function LoginAdmin() {
                     <input 
                       type="text" 
                       placeholder="Masukkan username / email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-14 py-4.5 bg-[#ECF1F6] border border-slate-100 rounded-2xl text-slate-700 placeholder:text-slate-400 font-medium text-[15px] focus:ring-2 focus:ring-blue-200 focus:border-blue-300 outline-none transition-all"
                       required
                     />
@@ -101,6 +130,8 @@ export default function LoginAdmin() {
                     <input 
                       type={showPassword ? "text" : "password"}
                       placeholder="Masukkan password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       className="w-full px-14 py-4.5 bg-[#ECF1F6] border border-slate-100 rounded-2xl text-slate-700 placeholder:text-slate-400 font-medium text-[15px] focus:ring-2 focus:ring-blue-200 focus:border-blue-300 outline-none transition-all"
                       required
                     />
@@ -121,11 +152,23 @@ export default function LoginAdmin() {
                  <Link to="#" className="text-blue-600 font-bold hover:text-blue-700">Lupa Password?</Link>
               </div>
 
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm font-medium flex items-center gap-2">
+                  <Icon icon="mdi:alert-circle" className="w-5 h-5 shrink-0" />
+                  {error}
+                </div>
+              )}
+
               <button 
-                 type="submit" 
-                 className="w-full py-5.5 bg-gradient-to-r from-[#112A46] to-[#1A3D63] hover:from-blue-900 hover:to-blue-800 text-white font-bold rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-[0_10px_20px_rgba(17,42,70,0.2)] hover:shadow-[0_15px_30px_rgba(17,42,70,0.3)] hover:-translate-y-1 text-[16px]">
-                Masuk ke Dashboard <Icon icon="mdi:arrow-right" className="w-6 h-6"/> 
-              </button>
+                  type="submit" 
+                  disabled={isLoading}
+                  className="w-full py-5.5 bg-gradient-to-r from-[#112A46] to-[#1A3D63] hover:from-blue-900 hover:to-blue-800 text-white font-bold rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-[0_10px_20px_rgba(17,42,70,0.2)] hover:shadow-[0_15px_30px_rgba(17,42,70,0.3)] hover:-translate-y-1 text-[16px] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                {isLoading ? (
+                  <><Icon icon="mdi:loading" className="w-6 h-6 animate-spin" /> Memproses...</>
+                ) : (
+                  <>Masuk ke Dashboard <Icon icon="mdi:arrow-right" className="w-6 h-6"/></>
+                )}
+               </button>
           </form>
           
           <div className="relative flex items-center justify-center my-8">

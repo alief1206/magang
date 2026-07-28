@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 
@@ -11,8 +11,27 @@ export default function KotakAspirasi() {
     pesan: '',
     isAnonim: false
   });
+
+  const [dataDiri, setDataDiri] = useState({
+    nama: '',
+    alamat: '',
+    nomorHp: '',
+    kelurahanId: ''
+  });
   
+  const [kelurahans, setKelurahans] = useState([]);
+  
+  const [showDataDiriModal, setShowDataDiriModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/kelurahans')
+      .then(res => res.json())
+      .then(data => setKelurahans(data))
+      .catch(err => console.error("Failed to fetch kelurahans", err));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -22,14 +41,56 @@ export default function KotakAspirasi() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleDataDiriChange = (e) => {
+    const { name, value } = e.target;
+    setDataDiri(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAspirasiSubmit = (e) => {
     e.preventDefault();
-    console.log("Data Aspirasi Terkirim:", formData);
-    setIsSubmitted(true);
+    setShowDataDiriModal(true);
+  };
+
+  const submitToAPI = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMsg('');
+
+    try {
+      const payload = {
+        name: formData.isAnonim ? 'Anonim' : dataDiri.nama,
+        address: dataDiri.alamat,
+        category: formData.kategori,
+        shortTitle: formData.judul,
+        description: formData.pesan,
+        kelurahanId: parseInt(dataDiri.kelurahanId, 10),
+        source: 'web'
+      };
+
+      const response = await fetch('http://localhost:5000/api/aspirations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal mengirim aspirasi');
+      }
+
+      setShowDataDiriModal(false);
+      setIsSubmitted(true);
+    } catch (err) {
+      setErrorMsg(err.message || 'Terjadi kesalahan saat mengirim aspirasi');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans flex flex-col">
+    <div className="min-h-screen bg-white font-sans flex flex-col relative">
       <div className="w-full bg-gradient-to-b from-[#112A46] to-[#1A3D63] pt-6 pb-24 relative z-0">
         
         <header className="px-6 lg:px-10 py-4 flex items-center gap-4 text-white">
@@ -54,7 +115,7 @@ export default function KotakAspirasi() {
         
         <div className="max-w-[1100px] mx-auto">
           {!isSubmitted ? (
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            <form onSubmit={handleAspirasiSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
               
               <div className="md:col-span-2 p-5 bg-amber-50 border border-amber-200 rounded-2xl flex gap-4 items-start mb-2">
                 <Icon icon="mdi:alert-circle-outline" className="w-7 h-7 text-amber-600 shrink-0 mt-0.5" />
@@ -163,6 +224,113 @@ export default function KotakAspirasi() {
           )}
         </div>
       </main>
+
+      {/* Modal Data Diri */}
+      {showDataDiriModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#112A46]/40 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl p-6 lg:p-8 animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-[#112A46]">Lengkapi Data Diri</h3>
+              <button 
+                onClick={() => setShowDataDiriModal(false)} 
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2"
+                type="button"
+              >
+                <Icon icon="mdi:close" className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {errorMsg && (
+              <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl text-sm border border-red-200 flex items-center gap-2">
+                <Icon icon="mdi:alert-circle" className="w-5 h-5 shrink-0" />
+                {errorMsg}
+              </div>
+            )}
+
+            <form onSubmit={submitToAPI} className="flex flex-col gap-4">
+              <div>
+                <label className="text-[14px] font-bold text-[#112A46] mb-1.5 block">
+                  Nama Lengkap {!formData.isAnonim && <span className="text-red-500">*</span>}
+                </label>
+                <input 
+                  type="text" 
+                  name="nama"
+                  value={dataDiri.nama}
+                  onChange={handleDataDiriChange}
+                  required={!formData.isAnonim}
+                  disabled={formData.isAnonim}
+                  placeholder={formData.isAnonim ? "Anonim (Disembunyikan)" : "Contoh: Budi Santoso"}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700 disabled:opacity-60 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="text-[14px] font-bold text-[#112A46] mb-1.5 block">
+                  Alamat / RT RW <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  name="alamat"
+                  value={dataDiri.alamat}
+                  onChange={handleDataDiriChange}
+                  required
+                  placeholder="Contoh: Jl. Merdeka RT 01/RW 02"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="text-[14px] font-bold text-[#112A46] mb-1.5 block">
+                  Kelurahan/Desa <span className="text-red-500">*</span>
+                </label>
+                <div className="relative group">
+                  <select 
+                    name="kelurahanId"
+                    value={dataDiri.kelurahanId}
+                    onChange={handleDataDiriChange}
+                    required
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700 appearance-none pr-10"
+                  >
+                    <option value="" disabled>Pilih Kelurahan...</option>
+                    {kelurahans.map(kel => (
+                      <option key={kel.id} value={kel.id}>{kel.name}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                    <Icon icon="mdi:chevron-down" className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[14px] font-bold text-[#112A46] mb-1.5 block">
+                  Nomor HP / WhatsApp (Opsional)
+                </label>
+                <input 
+                  type="text" 
+                  name="nomorHp"
+                  value={dataDiri.nomorHp}
+                  onChange={handleDataDiriChange}
+                  placeholder="Contoh: 081234567890"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-[#112A46] to-[#1A3D63] hover:from-blue-900 hover:to-blue-800 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all mt-4 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
+              >
+                {isLoading ? (
+                  <>Memproses... <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" /></>
+                ) : (
+                  <>Kirim Aspirasi <Icon icon="mdi:check-circle" className="w-5 h-5" /></>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

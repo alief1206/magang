@@ -2,7 +2,7 @@ const db = require('../config/database')
 const encryption = require('../utils/encryption')
 const { buildUpdateQuery } = require('../utils/queryBuilder')
 
-const conversationEncryptedFields = ['subject', 'citizenName']
+const conversationEncryptedFields = ['subject', 'citizenName', 'forwardedToLurahPhone']
 const messageEncryptedFields = ['message', 'senderName']
 
 async function findAll(filters = {}) {
@@ -38,10 +38,12 @@ async function findAll(filters = {}) {
         c.kelurahan_id AS kelurahanId,
         k.name AS kelurahanName,
         c.citizen_id AS citizenId,
-        u.name AS citizenName,
+        COALESCE(u.name, c.guest_name) AS citizenName,
         c.target_role AS targetRole,
         c.status,
         c.subject,
+        c.forwarded_to_lurah_phone AS forwardedToLurahPhone,
+        c.forwarded_to_lurah_at AS forwardedToLurahAt,
         c.last_message_at AS lastMessageAt,
         c.created_at AS createdAt,
         c.updated_at AS updatedAt
@@ -65,10 +67,12 @@ async function findById(id) {
         c.kelurahan_id AS kelurahanId,
         k.name AS kelurahanName,
         c.citizen_id AS citizenId,
-        u.name AS citizenName,
+        COALESCE(u.name, c.guest_name) AS citizenName,
         c.target_role AS targetRole,
         c.status,
         c.subject,
+        c.forwarded_to_lurah_phone AS forwardedToLurahPhone,
+        c.forwarded_to_lurah_at AS forwardedToLurahAt,
         c.last_message_at AS lastMessageAt,
         c.created_at AS createdAt,
         c.updated_at AS updatedAt
@@ -87,12 +91,13 @@ async function create(conversation) {
   const encryptedSubject = encryption.encryptText(conversation.subject)
   const [result] = await db.query(
     `
-      INSERT INTO chat_conversations (kelurahan_id, citizen_id, target_role, status, subject)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO chat_conversations (kelurahan_id, citizen_id, guest_name, target_role, status, subject)
+      VALUES (?, ?, ?, ?, ?, ?)
     `,
     [
       conversation.kelurahanId || null,
       conversation.citizenId || null,
+      conversation.guestName || null,
       conversation.targetRole || 'admin',
       conversation.status || 'waiting_response',
       encryptedSubject || null,
@@ -111,6 +116,8 @@ async function update(id, conversation) {
       target_role: conversation.targetRole,
       status: conversation.status,
       subject: encryption.encryptText(conversation.subject),
+      forwarded_to_lurah_phone: encryption.encryptText(conversation.forwardedToLurahPhone),
+      forwarded_to_lurah_at: conversation.forwardedToLurahAt,
     },
     id,
   )
@@ -131,10 +138,26 @@ async function addMessage(message) {
   const encryptedMessage = encryption.encryptText(message.message)
   const [result] = await db.query(
     `
-      INSERT INTO chat_messages (conversation_id, sender_id, sender_role, message)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO chat_messages (
+        conversation_id,
+        sender_id,
+        guest_sender_name,
+        sender_role,
+        message,
+        source,
+        external_message_id
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
-    [message.conversationId, message.senderId || null, message.senderRole, encryptedMessage],
+    [
+      message.conversationId,
+      message.senderId || null,
+      message.guestSenderName || null,
+      message.senderRole,
+      encryptedMessage,
+      message.source || 'web',
+      message.externalMessageId || null,
+    ],
   )
 
   await db.query('UPDATE chat_conversations SET last_message_at = CURRENT_TIMESTAMP WHERE id = ?', [
@@ -151,9 +174,11 @@ async function findMessages(conversationId) {
         m.id,
         m.conversation_id AS conversationId,
         m.sender_id AS senderId,
-        u.name AS senderName,
+        COALESCE(u.name, m.guest_sender_name) AS senderName,
         m.sender_role AS senderRole,
         m.message,
+        m.source,
+        m.external_message_id AS externalMessageId,
         m.is_read AS isRead,
         m.created_at AS createdAt,
         m.updated_at AS updatedAt
@@ -177,6 +202,8 @@ async function findMessageById(id) {
         sender_id AS senderId,
         sender_role AS senderRole,
         message,
+        source,
+        external_message_id AS externalMessageId,
         is_read AS isRead,
         created_at AS createdAt,
         updated_at AS updatedAt
@@ -211,6 +238,20 @@ async function removeMessage(conversationId, messageId) {
   return result.affectedRows > 0
 }
 
+async function markForwardedToLurah(id, phone) {
+  await db.query(
+    `
+      UPDATE chat_conversations
+      SET forwarded_to_lurah_phone = ?,
+          forwarded_to_lurah_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `,
+    [encryption.encryptText(phone), id],
+  )
+
+  return findById(id)
+}
+
 module.exports = {
   findAll,
   findById,
@@ -222,4 +263,5 @@ module.exports = {
   findMessageById,
   updateMessage,
   removeMessage,
+  markForwardedToLurah,
 }
