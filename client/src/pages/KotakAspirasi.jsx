@@ -4,95 +4,64 @@ import { Icon } from '@iconify/react';
 
 export default function KotakAspirasi() {
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
+    nama: '',
+    alamat: '',
     kategori: '',
     judul: '',
     pesan: '',
+    foto: null,
     isAnonim: false
   });
 
-  const [dataDiri, setDataDiri] = useState({
-    nama: '',
-    alamat: '',
-    nomorHp: '',
-    kelurahanId: ''
-  });
-  
-  const [kelurahans, setKelurahans] = useState([]);
-  
-  const [showDataDiriModal, setShowDataDiriModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  useEffect(() => {
-    fetch('http://localhost:5000/api/kelurahans')
-      .then(res => res.json())
-      .then(data => setKelurahans(data))
-      .catch(err => console.error("Failed to fetch kelurahans", err));
-  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    const nextValue = type === 'checkbox' ? checked : value;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: nextValue
     }));
-  };
 
-  const handleDataDiriChange = (e) => {
-    const { name, value } = e.target;
-    setDataDiri(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleAspirasiSubmit = (e) => {
-    e.preventDefault();
-    setShowDataDiriModal(true);
-  };
-
-  const submitToAPI = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrorMsg('');
-
-    try {
-      const payload = {
-        name: formData.isAnonim ? 'Anonim' : dataDiri.nama,
-        address: dataDiri.alamat,
-        category: formData.kategori,
-        shortTitle: formData.judul,
-        description: formData.pesan,
-        kelurahanId: parseInt(dataDiri.kelurahanId, 10),
-        source: 'web'
-      };
-
-      const response = await fetch('http://localhost:5000/api/aspirations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error('Gagal mengirim aspirasi');
-      }
-
-      setShowDataDiriModal(false);
-      setIsSubmitted(true);
-    } catch (err) {
-      setErrorMsg(err.message || 'Terjadi kesalahan saat mengirim aspirasi');
-    } finally {
-      setIsLoading(false);
+    if (type !== 'checkbox') {
+      setErrors(prev => ({ ...prev, [name]: validateField(name, nextValue) }));
     }
+  };
+
+  const handlePhotoChange = (e) => {
+    const photo = e.target.files?.[0] || null;
+    let photoError = '';
+
+    if (photo && !['image/jpeg', 'image/png'].includes(photo.type)) {
+      photoError = 'Format foto harus JPG, JPEG, atau PNG.';
+    } else if (photo && photo.size > 20 * 1024 * 1024) {
+      photoError = 'Ukuran foto maksimal 20 MB.';
+    }
+
+    setFormData(prev => ({ ...prev, foto: photoError ? null : photo }));
+    setErrors(prev => ({ ...prev, foto: photoError }));
+    if (photoError) e.target.value = '';
+  };
+
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(new Error('Foto tidak dapat dibaca.'));
+    reader.readAsDataURL(file);
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Data Aspirasi Terkirim:", formData);
+    setIsSubmitted(true);
   };
 
   return (
     <div className="min-h-screen bg-white font-sans flex flex-col relative">
       <div className="w-full bg-gradient-to-b from-[#112A46] to-[#1A3D63] pt-6 pb-24 relative z-0">
-        
+
         <header className="px-6 lg:px-10 py-4 flex items-center gap-4 text-white">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer outline-none">
             <Icon icon="mdi:arrow-left" className="w-6 h-6" />
@@ -110,13 +79,13 @@ export default function KotakAspirasi() {
           </p>
         </div>
       </div>
-      
+
       <main className="flex-1 w-full bg-white rounded-t-[3rem] -mt-12 relative z-10 px-6 py-12 lg:py-16 shadow-[0_-10px_30px_rgba(0,0,0,0.1)]">
-        
+
         <div className="max-w-[1100px] mx-auto">
           {!isSubmitted ? (
             <form onSubmit={handleAspirasiSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-              
+
               <div className="md:col-span-2 p-5 bg-amber-50 border border-amber-200 rounded-2xl flex gap-4 items-start mb-2">
                 <Icon icon="mdi:alert-circle-outline" className="w-7 h-7 text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-[14px] lg:text-[15px] text-amber-900 leading-relaxed">
@@ -125,17 +94,55 @@ export default function KotakAspirasi() {
               </div>
 
               <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#112A46]">Nama Lengkap <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                    <Icon icon="mdi:account-outline" className="w-6 h-6" />
+                  </div>
+                  <input
+                    type="text"
+                    name="nama"
+                    value={formData.nama}
+                    onChange={handleChange}
+                    placeholder="Contoh: Budi Santoso"
+                    required
+                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] ${errors.nama ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
+                  />
+                </div>
+                {errors.nama && <p className="text-sm text-red-600">{errors.nama}</p>}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#112A46]">Alamat Lengkap <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                    <Icon icon="mdi:map-marker-outline" className="w-6 h-6" />
+                  </div>
+                  <input
+                    type="text"
+                    name="alamat"
+                    value={formData.alamat}
+                    onChange={handleChange}
+                    placeholder="Contoh: Jl. Melati No. 10"
+                    required
+                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] ${errors.alamat ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
+                  />
+                </div>
+                {errors.alamat && <p className="text-sm text-red-600">{errors.alamat}</p>}
+              </div>
+
+              <div className="flex flex-col gap-3">
                 <label className="text-[15px] font-bold text-[#112A46]">Kategori Usulan <span className="text-red-500">*</span></label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                     <Icon icon="mdi:tag-outline" className="w-6 h-6" />
                   </div>
-                  <select 
+                  <select
                     name="kategori"
                     value={formData.kategori}
                     onChange={handleChange}
                     required
-                    className="w-full pl-14 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700 font-semibold text-[15px] appearance-none cursor-pointer"
+                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] appearance-none cursor-pointer ${errors.kategori ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
                   >
                     <option value="" disabled>Pilih kategori...</option>
                     <option value="Kualitas Pelayanan Administrasi">Kualitas Pelayanan Administrasi</option>
@@ -143,12 +150,14 @@ export default function KotakAspirasi() {
                     <option value="Kegiatan Sosial & Kesehatan">Sosial & Kesehatan (Posyandu, dll)</option>
                     <option value="Inovasi & Kegiatan Pemuda">Inovasi & Kegiatan Pemuda</option>
                     <option value="Ketertiban & Keamanan">Ketertiban & Keamanan</option>
+                    <option value="Infrastruktur">Infrastruktur</option>
                     <option value="Lainnya">Lainnya</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none text-slate-400">
                     <Icon icon="mdi:chevron-down" className="w-6 h-6" />
                   </div>
                 </div>
+                {errors.kategori && <p className="text-sm text-red-600">{errors.kategori}</p>}
               </div>
 
               <div className="flex flex-col gap-3">
@@ -157,34 +166,49 @@ export default function KotakAspirasi() {
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                     <Icon icon="mdi:format-title" className="w-6 h-6" />
                   </div>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     name="judul"
                     value={formData.judul}
                     onChange={handleChange}
                     placeholder="Contoh: Pengadaan Bak Sampah"
                     required
-                    className="w-full pl-14 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700 font-semibold text-[15px]"
+                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] ${errors.judul ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
                   />
                 </div>
+                {errors.judul && <p className="text-sm text-red-600">{errors.judul}</p>}
               </div>
 
               <div className="md:col-span-2 flex flex-col gap-3 mt-2">
                 <label className="text-[15px] font-bold text-[#112A46]">Detail Aspirasi <span className="text-red-500">*</span></label>
-                <textarea 
+                <textarea
                   name="pesan"
                   value={formData.pesan}
                   onChange={handleChange}
                   placeholder="Ceritakan lebih detail mengenai gagasan atau evaluasi Anda di sini..."
                   required
                   rows="6"
-                  className="w-full p-6 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700 font-medium text-[15px] resize-none leading-relaxed"
+                  className={`w-full p-6 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-medium text-[15px] resize-none leading-relaxed ${errors.pesan ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
                 ></textarea>
+                {errors.pesan && <p className="text-sm text-red-600">{errors.pesan}</p>}
+              </div>
+
+              <div className="md:col-span-2 flex flex-col gap-3">
+                <label className="text-[15px] font-bold text-[#112A46]">Upload Bukti Foto <span className="text-slate-400 font-medium">(Opsional)</span></label>
+                <input
+                  type="file"
+                  name="foto"
+                  accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                  onChange={handlePhotoChange}
+                  className={`w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-medium text-[15px] ${errors.foto ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
+                />
+                <p className="text-sm text-slate-500">Format JPG, JPEG, atau PNG. Maksimal 20 MB.</p>
+                {errors.foto && <p className="text-sm text-red-600">{errors.foto}</p>}
               </div>
 
               <div className="md:col-span-2 flex items-start gap-4 p-5 bg-[#F0F6FF] rounded-2xl border border-blue-100">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   id="anonim"
                   name="isAnonim"
                   checked={formData.isAnonim}
@@ -197,11 +221,14 @@ export default function KotakAspirasi() {
                 </label>
               </div>
 
-              <button 
-                type="submit" 
+              {submitError && <p className="md:col-span-2 text-sm text-red-600 text-center">{submitError}</p>}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
                 className="md:col-span-2 w-full bg-gradient-to-r from-[#112A46] to-[#1A3D63] hover:from-blue-900 hover:to-blue-800 text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-2 transition-all mt-4 shadow-[0_10px_20px_rgba(17,42,70,0.2)] hover:shadow-[0_15px_30px_rgba(17,42,70,0.3)] hover:-translate-y-1 text-[16px]"
               >
-                Kirim Aspirasi Sekarang <Icon icon="mdi:send-check" className="w-6 h-6" />
+                {isSubmitting ? 'Mengirim...' : 'Kirim Aspirasi Sekarang'} <Icon icon="mdi:send-check" className="w-6 h-6" />
               </button>
             </form>
 
@@ -214,11 +241,11 @@ export default function KotakAspirasi() {
               <p className="text-slate-500 text-[16px] leading-relaxed max-w-md mb-10">
                 Terima kasih atas partisipasi Anda. Pesan Anda telah masuk ke sistem dan akan menjadi bahan pertimbangan Lurah.
               </p>
-              <button 
-                onClick={() => navigate(-1)} 
+              <button
+                onClick={() => navigate(-1)}
                 className="px-10 py-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[#112A46] font-bold rounded-2xl flex items-center justify-center gap-2 transition-colors text-[15px]"
               >
-                <Icon icon="mdi:arrow-left" className="w-5 h-5"/> Kembali ke Layanan Utama
+                <Icon icon="mdi:arrow-left" className="w-5 h-5" /> Kembali ke Layanan Utama
               </button>
             </div>
           )}
@@ -231,15 +258,15 @@ export default function KotakAspirasi() {
           <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl p-6 lg:p-8 animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-[#112A46]">Lengkapi Data Diri</h3>
-              <button 
-                onClick={() => setShowDataDiriModal(false)} 
+              <button
+                onClick={() => setShowDataDiriModal(false)}
                 className="text-slate-400 hover:text-slate-600 transition-colors p-2"
                 type="button"
               >
                 <Icon icon="mdi:close" className="w-6 h-6" />
               </button>
             </div>
-            
+
             {errorMsg && (
               <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl text-sm border border-red-200 flex items-center gap-2">
                 <Icon icon="mdi:alert-circle" className="w-5 h-5 shrink-0" />
@@ -252,8 +279,8 @@ export default function KotakAspirasi() {
                 <label className="text-[14px] font-bold text-[#112A46] mb-1.5 block">
                   Nama Lengkap {!formData.isAnonim && <span className="text-red-500">*</span>}
                 </label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   name="nama"
                   value={dataDiri.nama}
                   onChange={handleDataDiriChange}
@@ -268,8 +295,8 @@ export default function KotakAspirasi() {
                 <label className="text-[14px] font-bold text-[#112A46] mb-1.5 block">
                   Alamat / RT RW <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   name="alamat"
                   value={dataDiri.alamat}
                   onChange={handleDataDiriChange}
@@ -284,7 +311,7 @@ export default function KotakAspirasi() {
                   Kelurahan/Desa <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
-                  <select 
+                  <select
                     name="kelurahanId"
                     value={dataDiri.kelurahanId}
                     onChange={handleDataDiriChange}
@@ -306,8 +333,8 @@ export default function KotakAspirasi() {
                 <label className="text-[14px] font-bold text-[#112A46] mb-1.5 block">
                   Nomor HP / WhatsApp (Opsional)
                 </label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   name="nomorHp"
                   value={dataDiri.nomorHp}
                   onChange={handleDataDiriChange}
@@ -316,8 +343,8 @@ export default function KotakAspirasi() {
                 />
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-[#112A46] to-[#1A3D63] hover:from-blue-900 hover:to-blue-800 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all mt-4 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
               >
