@@ -20,18 +20,26 @@ export default function TanyaLurah() {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [notification, setNotification] = useState('');
   
   const messagesEndRef = useRef(null);
+  const prevWaitingCount = useRef(0);
+  const isFirstFetch = useRef(true);
 
   const token = localStorage.getItem('adminToken');
 
   useEffect(() => {
+    let interval;
     if (token) {
-      fetchConversations();
+      fetchConversations(true); // Initial fetch
+      interval = setInterval(() => {
+        fetchConversations(false);
+      }, 3000);
     } else {
       setError('Sesi telah berakhir atau Anda belum login.');
       setIsLoading(false);
     }
+    return () => clearInterval(interval);
   }, [token]);
 
   useEffect(() => {
@@ -53,18 +61,38 @@ export default function TanyaLurah() {
     'Content-Type': 'application/json'
   });
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) setIsLoading(true);
       const res = await fetch('http://localhost:5000/api/chats', { headers: getHeaders() });
       if (!res.ok) throw new Error('Gagal memuat percakapan');
       const data = await res.json();
-      setConversations(data.data || []);
+      
+      const newConversations = data.data || [];
+      setConversations(newConversations);
+
+      const currentWaitingCount = newConversations.filter(c => c.status === 'waiting_response').length;
+      
+      if (!isFirstFetch.current && currentWaitingCount > prevWaitingCount.current) {
+         setNotification('Ada pesan baru dari warga!');
+         // Auto hide notification
+         setTimeout(() => setNotification(''), 4000);
+         
+         // Play sound (optional, might require user interaction first, but standard notification sound)
+         try {
+           const audio = new Audio('/notification.mp3'); // Fallback if file doesn't exist it fails silently
+           audio.play().catch(e => e);
+         } catch(e) {}
+      }
+      
+      prevWaitingCount.current = currentWaitingCount;
+      isFirstFetch.current = false;
+      
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      if (showLoading) setError(err.message);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
@@ -259,7 +287,26 @@ export default function TanyaLurah() {
 
   // List View render
   return (
-    <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full flex flex-col h-full">
+    <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full flex flex-col h-full relative">
+      
+      {/* Toast Notification */}
+      {notification && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="absolute top-4 right-8 z-50 bg-[#112A46] text-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3 border border-blue-800"
+        >
+          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+            <Icon icon="mdi:bell-ring-outline" className="w-6 h-6 text-blue-400" />
+          </div>
+          <span className="font-bold">{notification}</span>
+          <button onClick={() => setNotification('')} className="ml-4 text-slate-400 hover:text-white">
+            <Icon icon="mdi:close" className="w-5 h-5" />
+          </button>
+        </motion.div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold text-[#112A46] mb-2">Tanya Lurah</h1>
         <p className="text-slate-500">Kelola dan balas pertanyaan warga dengan cepat.</p>

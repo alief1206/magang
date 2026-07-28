@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import adminImage from '../assets/images/karakter.png';
@@ -29,6 +30,7 @@ export default function TanyaPelayanan() {
     }
   ]);
   const [pendingSubject, setPendingSubject] = useState('');
+  const [isAwaitingQuestion, setIsAwaitingQuestion] = useState(false);
 
   // FORM STATES
   const [inputText, setInputText] = useState("");
@@ -43,7 +45,7 @@ export default function TanyaPelayanan() {
   useEffect(() => {
     fetch('http://localhost:5000/api/kelurahans')
       .then(res => res.json())
-      .then(data => setKelurahans(data))
+      .then(data => setKelurahans(data.data || []))
       .catch(err => console.error("Failed to fetch kelurahans", err));
   }, []);
 
@@ -109,23 +111,25 @@ export default function TanyaPelayanan() {
       setLocalMessages(prev => [...prev, {
         id: Date.now(),
         sender: 'bot',
-        type: 'escalation',
-        text: 'Mohon maaf jawaban saya belum membantu. Silakan isi data diri Anda, dan pesan ini akan diteruskan ke Admin / Lurah.'
+        text: 'Silakan ketikkan pertanyaan Anda.'
       }]);
-      setPendingSubject(subject || 'Pertanyaan Lanjutan');
-      setShowDataDiriModal(true);
+      setIsAwaitingQuestion(true);
     }
   };
 
   const handleSendLocalMessage = (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    
+    const sentText = inputText.trim();
+    if (!sentText) return;
+
+    setInputText('');
 
     // Push user message
     setLocalMessages(prev => [...prev, {
       id: Date.now(),
       sender: 'user',
-      text: inputText
+      text: sentText
     }]);
 
     // Push bot escalation
@@ -134,13 +138,12 @@ export default function TanyaPelayanan() {
         id: Date.now() + 1,
         sender: 'bot',
         type: 'escalation',
-        text: 'Pesan Anda memerlukan bantuan Admin/Lurah. Silakan lengkapi data diri Anda agar kami dapat membalas.'
+        text: 'Terimakasih atas pertanyaan Anda, pertanyaan Anda akan kami teruskan ke pihak admin. Terimakasih. Silakan lengkapi data diri Anda di bawah ini.'
       }]);
-      setPendingSubject(inputText);
+      setPendingSubject(sentText);
       setShowDataDiriModal(true);
+      setIsAwaitingQuestion(false);
     }, 500);
-
-    setInputText('');
   };
 
   // LIVE CHAT CREATION
@@ -170,10 +173,27 @@ export default function TanyaPelayanan() {
       localStorage.setItem('conversationId', newConversationId);
       localStorage.setItem('guestName', dataDiri.nama);
       
+      // Pre-populate live messages to avoid blank space
+      setLiveMessages([{
+        id: 'temp-' + Date.now(),
+        message: pendingSubject,
+        senderRole: 'warga',
+        guestName: dataDiri.nama,
+        createdAt: new Date().toISOString()
+      }]);
+      
       setConversationId(newConversationId);
       setGuestName(dataDiri.nama);
       setShowDataDiriModal(false);
       setInputText('');
+      
+      // Push the final bot message so it feels seamless
+      setLocalMessages(prev => [...prev, {
+        id: Date.now(),
+        sender: 'bot',
+        text: 'Terimakasih atas pertanyaan Anda, pertanyaan Anda akan kami teruskan ke pihak admin. Terimakasih.'
+      }]);
+      
     } catch (error) {
       console.error(error);
       alert('Gagal memulai percakapan');
@@ -184,11 +204,25 @@ export default function TanyaPelayanan() {
 
   const handleSendLiveMessage = async (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    const sentText = inputText.trim();
+    if (!sentText) return;
+    
+    setInputText('');
+    
+    const tempId = 'temp-' + Date.now();
+    
+    // Optimistic UI update
+    setLiveMessages(prev => [...prev, {
+      id: tempId,
+      message: sentText,
+      senderRole: 'warga',
+      guestName: guestName,
+      createdAt: new Date().toISOString()
+    }]);
 
     try {
       const payload = {
-        message: inputText,
+        message: sentText,
         guestName: guestName,
       };
 
@@ -201,11 +235,15 @@ export default function TanyaPelayanan() {
       if (!response.ok) throw new Error('Gagal mengirim pesan');
       
       const data = await response.json();
-      setLiveMessages(prev => [...prev, data.data]);
-      setInputText('');
+      
+      // Replace optimistic message with actual message from server
+      setLiveMessages(prev => prev.map(msg => msg.id === tempId ? data.data : msg));
+      
     } catch (error) {
       console.error(error);
       alert('Gagal mengirim pesan');
+      // Revert optimistic message if error
+      setLiveMessages(prev => prev.filter(msg => msg.id !== tempId));
     }
   };
 
@@ -218,7 +256,15 @@ export default function TanyaPelayanan() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#F0F4F8] font-sans">
+    <ErrorBoundary fallbackRender={({ error }) => (
+      <div className="p-10 text-red-600 bg-red-50 min-h-screen">
+        <h1 className="text-2xl font-bold">Terjadi Kesalahan (Crash)</h1>
+        <pre className="mt-4 bg-white p-4 rounded shadow overflow-auto whitespace-pre-wrap text-sm">{error.message}</pre>
+        <pre className="mt-4 bg-white p-4 rounded shadow overflow-auto whitespace-pre-wrap text-xs">{error.stack}</pre>
+        <p className="mt-4 font-bold">Mohon kirimkan tangkapan layar (screenshot) halaman ini agar bisa diperbaiki.</p>
+      </div>
+    )}>
+      <div className="flex flex-col h-screen bg-[#F0F4F8] font-sans">
       <header className="bg-[#112A46] px-6 py-5 flex items-center gap-4 text-white z-10 shadow-md shrink-0">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-full transition-colors outline-none">
           <Icon icon="mdi:arrow-left" className="w-6 h-6" />
@@ -241,8 +287,8 @@ export default function TanyaPelayanan() {
 
       <main className="flex-1 overflow-y-auto p-6 lg:p-10 flex flex-col gap-6">
         
-        {/* RENDER BOT MODE */}
-        {!conversationId && localMessages.map((msg) => {
+        {/* RENDER BOT MODE (ALWAYS VISIBLE) */}
+        {localMessages.map((msg) => {
           if (msg.type === 'greeting') {
             return (
               <div key={msg.id} className="flex items-start gap-4">
@@ -319,9 +365,15 @@ export default function TanyaPelayanan() {
                   <p className="text-slate-500 text-[13px] mb-5 leading-relaxed">
                     {msg.text}
                   </p>
-                  <button onClick={() => setShowDataDiriModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors text-sm w-full justify-center outline-none">
-                    <Icon icon="mdi:account-details-outline" className="w-5 h-5" /> Isi Data Diri
-                  </button>
+                  {!conversationId ? (
+                    <button onClick={() => setShowDataDiriModal(true)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors text-sm w-full justify-center outline-none">
+                      <Icon icon="mdi:account-details-outline" className="w-5 h-5" /> Isi Data Diri
+                    </button>
+                  ) : (
+                    <div className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-xl font-medium transition-colors text-sm w-full flex items-center justify-center gap-2 border border-emerald-200">
+                      <Icon icon="mdi:check-circle" className="w-5 h-5" /> Data Diri Terkirim
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -350,7 +402,12 @@ export default function TanyaPelayanan() {
         })}
 
         {/* RENDER LIVE CHAT MODE */}
-        {conversationId && liveMessages.map((msg) => {
+        {conversationId && liveMessages.map((msg, idx) => {
+          // Skip first message if we still have local history (prevents duplicate display of the question)
+          if (idx === 0 && msg.senderRole === 'warga' && localMessages.length > 1) {
+            return null;
+          }
+
           const isUser = msg.senderRole === 'warga';
           const isLurah = msg.senderRole === 'lurah';
           
@@ -485,6 +542,7 @@ export default function TanyaPelayanan() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
