@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
 import { 
@@ -71,17 +72,19 @@ export default function StatistikLaporan() {
             Analisis data interaksi warga dan performa layanan kelurahan.
           </p>
         </div>
-        <div className="relative shrink-0">
-          <select 
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="appearance-none bg-white border border-slate-200 text-slate-700 font-bold py-3 pl-5 pr-12 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
-          >
-            <option>7 hari terakhir</option>
-            <option>30 hari terakhir</option>
-            <option>Bulan ini</option>
-          </select>
-          <Icon icon="mdi:chevron-down" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+        <div className="w-full sm:w-auto flex items-center gap-3 shrink-0">
+          <div className="relative w-full">
+            <select 
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="w-full appearance-none bg-white border border-slate-200 text-slate-700 font-bold py-3 pl-5 pr-12 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
+            >
+              <option>7 hari terakhir</option>
+              <option>30 hari terakhir</option>
+              <option>Bulan ini</option>
+            </select>
+            <Icon icon="mdi:chevron-down" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+          </div>
         </div>
       </motion.div>
 
@@ -179,9 +182,9 @@ export default function StatistikLaporan() {
             </div>
           </div>
           
-          <button className="w-full mt-8 py-3.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 group">
+          <Link to="/admin/aspirasi" className="w-full mt-8 py-3.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 group">
             Lihat semua aspirasi <Icon icon="mdi:arrow-right" className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          </Link>
         </motion.div>
       </div>
       

@@ -1,9 +1,27 @@
 import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function InformasiKelurahan() {
   const [activeTab, setActiveTab] = useState('semua');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    type: 'Pengumuman',
+    date: '',
+    description: '',
+  });
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    alert(`Berhasil membuat informasi: ${formData.title}`);
+    setIsModalOpen(false);
+    setFormData({ title: '', type: 'Pengumuman', date: '', description: '' });
+  };
 
   const listData = [
     { id: 1, title: "Kerja Bakti Lingkungan", date: "Minggu, 12 Mei 2026", type: "Agenda", color: "text-emerald-600 bg-emerald-50 border-emerald-100", img: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&q=80&w=150&h=100" },
@@ -55,7 +73,7 @@ export default function InformasiKelurahan() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-          {['Semua', 'Agenda', 'Pengumuman'].map(tab => (
+          {['Semua', 'Agenda', 'Pengumuman', 'Program'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab.toLowerCase())} className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all border ${activeTab === tab.toLowerCase() ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
               {tab}
             </button>
@@ -64,13 +82,15 @@ export default function InformasiKelurahan() {
             Perlu Lurah <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-md">7</span>
           </button>
         </div>
-        <button className="bg-[#112A46] hover:bg-blue-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md shrink-0">
+        <button onClick={() => setIsModalOpen(true)} className="bg-[#112A46] hover:bg-blue-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md shrink-0">
           <Icon icon="mdi:plus" className="w-5 h-5" /> Buat Informasi
         </button>
       </div>
 
       <div className="space-y-3">
-        {listData.map((item, index) => (
+        {listData
+          .filter(item => activeTab === 'semua' || item.type.toLowerCase() === activeTab)
+          .map((item, index) => (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -91,6 +111,132 @@ export default function InformasiKelurahan() {
           </motion.div>
         ))}
       </div>
+
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setIsModalOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50">
+                <h3 className="text-xl font-extrabold text-[#112A46] flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                    <Icon icon="mdi:bullhorn-outline" className="w-5 h-5" />
+                  </div>
+                  Buat Informasi Baru
+                </h3>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                >
+                  <Icon icon="mdi:close" className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto">
+                <form id="info-form" onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Jenis Informasi</label>
+                      <div className="relative">
+                        <select
+                          name="type"
+                          value={formData.type}
+                          onChange={handleInputChange}
+                          className="w-full appearance-none bg-slate-50 border border-slate-200 text-slate-700 font-medium py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all cursor-pointer"
+                        >
+                          <option value="Pengumuman">Pengumuman</option>
+                          <option value="Agenda">Agenda Kelurahan</option>
+                          <option value="Program">Program Kelurahan</option>
+                        </select>
+                        <Icon icon="mdi:chevron-down" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Tanggal (Opsional)</label>
+                      <div className="relative">
+                        <Icon icon="mdi:calendar-outline" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                        <input
+                          type="date"
+                          name="date"
+                          value={formData.date}
+                          onChange={handleInputChange}
+                          className="w-full bg-slate-50 border border-slate-200 text-slate-700 font-medium py-3 pl-12 pr-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Judul Informasi</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      placeholder="Masukkan judul informasi..."
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-700 font-medium py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Isi Keterangan</label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      placeholder="Tuliskan detail informasi, pengumuman, atau agenda di sini..."
+                      rows={5}
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-700 font-medium py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none"
+                      required
+                    ></textarea>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Unggah Gambar (Opsional)</label>
+                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 hover:border-blue-300 transition-all cursor-pointer group">
+                      <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        <Icon icon="mdi:cloud-upload-outline" className="w-6 h-6" />
+                      </div>
+                      <p className="text-sm font-bold text-slate-600">Klik untuk unggah atau seret file</p>
+                      <p className="text-xs text-slate-400 mt-1">PNG, JPG atau WEBP (Maks. 2MB)</p>
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-6 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  form="info-form"
+                  className="px-6 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-blue-600 to-[#112A46] hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                >
+                  <Icon icon="mdi:check" className="w-5 h-5" /> Simpan & Publikasikan
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       
     </div>
   );

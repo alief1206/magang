@@ -32,13 +32,34 @@ export default function AdminHeader({ toggleSidebar }) {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+    const adminUserStr = localStorage.getItem('adminUser');
+    let isLurah = false;
+    if (adminUserStr) {
+      try {
+        const adminUser = JSON.parse(adminUserStr);
+        if (adminUser.role === 'lurah') {
+          isLurah = true;
+        }
+      } catch (e) {}
+    }
+
+    if (!isLurah) return;
+
+    const token = localStorage.getItem('adminToken') || localStorage.getItem('authToken') || localStorage.getItem('token');
     if (!token) return;
 
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/aspirations/notifications/lurah`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((response) => response.ok ? response.json() : null)
+      .then((response) => {
+        if (response.status === 401) {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          navigate('/admin/login');
+          return null;
+        }
+        return response.ok ? response.json() : null;
+      })
       .then((result) => {
         if (!result?.data) return;
         setNotifications(result.data.map((notification) => ({
@@ -146,7 +167,7 @@ export default function AdminHeader({ toggleSidebar }) {
             {isNotifOpen && (
               <motion.div 
                 initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.2 }}
-                className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden z-50"
+                className="absolute -right-20 sm:right-0 mt-2 w-[85vw] max-w-[340px] sm:w-80 md:w-96 sm:max-w-none bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden z-[60] origin-top-right"
               >
                 <div className="flex items-center justify-between p-4 border-b border-slate-100">
                   <h4 className="font-bold text-[#112A46]">Notifikasi {unreadCount > 0 && `(${unreadCount})`}</h4>

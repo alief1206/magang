@@ -136,7 +136,7 @@ async function addMessage(conversationId, payload, user) {
   const messagePayload = {
     ...payload,
     senderId: payload.senderId || (user && user.id),
-    senderRole: payload.senderRole || (user && user.role),
+    senderRole: payload.senderRole || (user && user.role) || (!user ? 'warga' : undefined),
   }
   const errors = conversationValidator.validateMessage(messagePayload)
 
