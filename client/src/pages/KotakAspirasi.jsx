@@ -108,7 +108,7 @@ export default function KotakAspirasi() {
     
     // Validate all before showing modal
     const nextErrors = Object.fromEntries(
-      ['nama', 'alamat', 'kategori', 'judul', 'pesan'].map((field) => [
+      ['kategori', 'judul', 'pesan'].map((field) => [
         field,
         validateField(field, formData[field]),
       ]),
@@ -199,43 +199,7 @@ export default function KotakAspirasi() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <label className="text-[15px] font-bold text-[#112A46]">Nama Lengkap <span className="text-red-500">*</span></label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
-                    <Icon icon="mdi:account-outline" className="w-6 h-6" />
-                  </div>
-                  <input
-                    type="text"
-                    name="nama"
-                    value={formData.nama}
-                    onChange={handleChange}
-                    placeholder="Contoh: Budi Santoso"
-                    required
-                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] ${errors?.nama ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
-                  />
-                </div>
-                {errors?.nama && <p className="text-sm text-red-600">{errors.nama}</p>}
-              </div>
 
-              <div className="flex flex-col gap-3">
-                <label className="text-[15px] font-bold text-[#112A46]">Alamat Lengkap <span className="text-red-500">*</span></label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
-                    <Icon icon="mdi:map-marker-outline" className="w-6 h-6" />
-                  </div>
-                  <input
-                    type="text"
-                    name="alamat"
-                    value={formData.alamat}
-                    onChange={handleChange}
-                    placeholder="Contoh: Jl. Melati No. 10"
-                    required
-                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] ${errors?.alamat ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
-                  />
-                </div>
-                {errors?.alamat && <p className="text-sm text-red-600">{errors.alamat}</p>}
-              </div>
 
               <div className="flex flex-col gap-3">
                 <label className="text-[15px] font-bold text-[#112A46]">Kategori Usulan <span className="text-red-500">*</span></label>

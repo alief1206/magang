@@ -56,7 +56,7 @@ export default function TanyaLurah() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#F0F4F8] font-sans">
+    <div className="flex flex-col h-[100dvh] bg-[#F0F4F8] font-sans">
       <header className="bg-[#112A46] px-6 py-5 flex items-center gap-4 text-white z-10 shadow-md">
         <Link to="/" className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer outline-none">
           <Icon icon="mdi:arrow-left" className="w-6 h-6" />

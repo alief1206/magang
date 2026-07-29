@@ -16,8 +16,8 @@ export default function TanyaPelayanan() {
   const navigate = useNavigate();
   
   // LIVE CHAT STATES
-  const [conversationId, setConversationId] = useState(localStorage.getItem('conversationId') || null);
-  const [guestName, setGuestName] = useState(localStorage.getItem('guestName') || '');
+  const [conversationId, setConversationId] = useState(null);
+  const [guestName, setGuestName] = useState('');
   const [liveMessages, setLiveMessages] = useState([]);
   
   // BOT / LOCAL STATES
@@ -58,8 +58,7 @@ export default function TanyaPelayanan() {
           .then(res => {
             if (!res.ok) {
               if (res.status === 404) {
-                // If conversation not found, clear local storage
-                localStorage.removeItem('conversationId');
+                // If conversation not found, reset state
                 setConversationId(null);
               }
               throw new Error('Failed to fetch conversation');
@@ -170,9 +169,6 @@ export default function TanyaPelayanan() {
       const data = await response.json();
       const newConversationId = data.data.id;
       
-      localStorage.setItem('conversationId', newConversationId);
-      localStorage.setItem('guestName', dataDiri.nama);
-      
       // Pre-populate live messages to avoid blank space
       setLiveMessages([{
         id: 'temp-' + Date.now(),
@@ -264,7 +260,7 @@ export default function TanyaPelayanan() {
         <p className="mt-4 font-bold">Mohon kirimkan tangkapan layar (screenshot) halaman ini agar bisa diperbaiki.</p>
       </div>
     )}>
-      <div className="flex flex-col h-screen bg-[#F0F4F8] font-sans">
+      <div className="flex flex-col h-[100dvh] bg-[#F0F4F8] font-sans">
       <header className="bg-[#112A46] px-6 py-5 flex items-center gap-4 text-white z-10 shadow-md shrink-0">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-full transition-colors outline-none">
           <Icon icon="mdi:arrow-left" className="w-6 h-6" />
@@ -472,7 +468,7 @@ export default function TanyaPelayanan() {
       {/* Modal Data Diri untuk Memulai Live Chat */}
       {showDataDiriModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#112A46]/60 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl p-6 lg:p-8 animate-in fade-in zoom-in duration-300">
+          <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl p-6 lg:p-8 animate-in fade-in zoom-in duration-300 max-h-[90dvh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-[#112A46]">Hubungi Admin / Lurah</h3>
               <button 

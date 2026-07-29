@@ -3,72 +3,32 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import rapat from '../assets/images/rapat.png';
 import lurah2 from '../assets/images/Lurah-2.png'; 
+import { mockInformasi, formatInformasiByCategory } from '../data/mockInformasi';
+import { useState, useEffect } from 'react';
 
 export default function Informasi() {
   const navigate = useNavigate();
 
-  const categories = [
-    {
-      title: "Agenda Kegiatan",
-      items: [
-        { 
-          name: "Musyawarah RT", 
-          headerIcon: "mdi:presentation",
-          desc: "Pembahasan Program kerja lingkungan dan rencana bulan Juli", 
-          date: "Senin, 15 Juli 2026", 
-          time: "08.00 WIB - Selesai", 
-          loc: "Balai Kelurahan", 
-          target: "Terbuka untuk seluruh warga." 
-        },
-        { 
-          name: "Rapat Rutinan", 
-          headerIcon: "mdi:bullhorn",
-          desc: "Rapat koordinasi bulanan pengurus kelurahan mengenai evaluasi kinerja staf.", 
-          date: "Jumat, 20 Juli 2026", 
-          time: "09.00 WIB - Selesai", 
-          loc: "Balai Kelurahan", 
-          target: "Khusus staf dan jajaran RT/RW." 
+  const [kelurahans, setKelurahans] = useState([]);
+  const [selectedKelurahan, setSelectedKelurahan] = useState('');
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/kelurahans')
+      .then(res => res.json())
+      .then(data => {
+        if (data.data && data.data.length > 0) {
+          setKelurahans(data.data);
+          setSelectedKelurahan(data.data[0].id.toString());
         }
-      ]
-    },
-    {
-      title: "Pengumuman",
-      items: [
-        { 
-          name: "Bantuan Sosial (Bansos) / Pembagian Sembako", 
-          headerIcon: "mdi:human-dolly",
-          desc: "Pembagian sembako rutin untuk warga yang terdaftar sebagai penerima bantuan.", 
-          date: "Selasa, 17 Juli 2026", 
-          time: "09.00 WIB - Selesai", 
-          loc: "Balai Kelurahan", 
-          target: "Warga penerima undangan bansos" 
-        }
-      ]
-    },
-    {
-      title: "Program Kegiatan",
-      items: [
-        { 
-          name: "Posyandu & Cek Kesehatan", 
-          headerIcon: "mdi:hospital-box-outline",
-          desc: "Pelayanan imunisasi balita serta pemeriksaan tekanan darah gratis untuk lansia.", 
-          date: "Rabu, 18 Juli 2026", 
-          time: "07.00 WIB - Selesai", 
-          loc: "Balai RT / RW", 
-          target: "Terbuka untuk ibu hamil, balita, dan lansia" 
-        },
-        { 
-          name: "Pembukaan Siskamling Baru", 
-          headerIcon: "mdi:shield-home-outline",
-          desc: "Koordinasi perdana jadwal ronda malam demi meningkatkan keamanan.", 
-          date: "Jumat, 20 Juli 2026", 
-          time: "22.00 WIB - Selesai", 
-          loc: "Pos Ronda Utama", 
-          target: "Terbuka untuk seluruh warga." 
-        }
-      ]
-    }
-  ];
+      })
+      .catch(err => console.error("Failed to fetch kelurahans", err));
+  }, []);
+
+  const filteredData = selectedKelurahan 
+    ? mockInformasi.filter(item => item.kelurahanId.toString() === selectedKelurahan)
+    : mockInformasi;
+
+  const categories = formatInformasiByCategory(filteredData);
 
   return (
     <div className="bg-[#F8FAFC] min-h-screen font-sans flex flex-col pb-12">
@@ -81,10 +41,10 @@ export default function Informasi() {
           <h1 className="font-bold text-[18px] tracking-wide">Informasi</h1>
         </header>
 
-        <div className="relative z-20 max-w-[1440px] w-full mx-auto px-6 lg:px-10 flex flex-col md:flex-row items-end justify-between gap-10">
+        <div className="relative z-20 max-w-[1440px] w-full mx-auto px-6 lg:px-10 flex flex-col items-center justify-center text-center gap-6">
           
-          <div className="w-full md:flex-1 text-left pb-4 lg:pb-12">
-            <div className="inline-flex items-center justify-center lg:justify-start gap-2 px-5 py-2.5 rounded-full bg-white/10 border border-white/20 text-blue-100 font-medium text-sm w-fit mb-6 mx-auto lg:mx-0 backdrop-blur-sm shadow-lg">
+          <div className="w-full max-w-3xl pb-0 lg:pb-4">
+            <div className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white/10 border border-white/20 text-blue-100 font-medium text-sm w-fit mb-6 mx-auto backdrop-blur-sm shadow-lg">
               <Icon icon="mdi:sparkles" className="text-emerald-400 w-5 h-5" /> Pusat Layanan Digital
             </div>
 
@@ -92,25 +52,52 @@ export default function Informasi() {
               Informasi Kelurahan
             </h1>
             
-            <p className="text-slate-200 text-lg lg:text-xl leading-relaxed max-w-xl mx-auto lg:mx-0">
+            <p className="text-slate-200 text-lg lg:text-xl leading-relaxed mx-auto">
               Dapatkan informasi terbaru seputar kegiatan, pengumuman, dan program kelurahan. Tetap terhubung dengan warga lainnya melalui layanan ini.
             </p>
           </div>
           
-          <div className="flex-shrink-0 flex items-end h-full pt-6 md:pt-0 relative z-30">
+          <div className="flex-shrink-0 flex items-end justify-center w-full relative z-30 mt-4 md:mt-0">
              <div className="relative transform translate-y-[35px] lg:translate-y-[65px]">
                <div className="absolute bottom-[8px] left-1/2 -translate-x-1/2 w-[60%] h-[15px] bg-black/40 blur-[12px] rounded-[100%] z-0"></div>
                <img 
                  src={lurah2} 
                  alt="Aktor Lurah" 
-                 className="w-[260px] md:w-[360px] lg:w-[460px] h-auto object-contain block relative z-10 drop-shadow-[0_20px_20px_rgba(0,0,0,0.4)]" 
+                 className="w-[340px] md:w-[480px] lg:w-[600px] h-auto object-contain block relative z-10 drop-shadow-[0_20px_20px_rgba(0,0,0,0.4)] mx-auto" 
                />
              </div>
           </div>
 
         </div>
       </section>
-      <section className="py-16 pt-24 lg:pt-32 bg-white rounded-t-[3rem] relative z-10 -mt-16 shadow-[0_-15px_40px_rgba(0,0,0,0.1)] border-t border-slate-100">
+
+      <div className="max-w-[1440px] w-full mx-auto px-6 lg:px-10 mt-8 relative z-20">
+        <div className="bg-white p-5 lg:p-6 rounded-2xl shadow-[0_5px_20px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col md:flex-row items-center gap-4">
+          <div className="flex-shrink-0 text-[#112A46] font-bold">
+            <Icon icon="mdi:filter-variant" className="w-6 h-6 inline-block mr-2" />
+            Filter Kelurahan:
+          </div>
+          <div className="relative w-full md:w-auto md:flex-1 max-w-sm">
+            <select
+              value={selectedKelurahan}
+              onChange={(e) => setSelectedKelurahan(e.target.value)}
+              className="w-full appearance-none bg-slate-50 border border-slate-200 text-slate-700 font-bold py-3 pl-4 pr-10 rounded-xl outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 cursor-pointer transition-all"
+            >
+              <option value="" disabled>Pilih Kelurahan...</option>
+              {kelurahans.map((kel) => (
+                <option key={kel.id} value={kel.id}>
+                  Kelurahan {kel.name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+              <Icon icon="mdi:chevron-down" className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section className="py-12 lg:py-16 bg-white rounded-t-[3rem] relative z-10 -mt-10 shadow-[0_-15px_40px_rgba(0,0,0,0.1)] border-t border-slate-100">
         <div className="max-w-[1440px] w-full mx-auto px-6 lg:px-8">
           {categories.map((cat, idx) => (
             <div key={idx} className="mb-12">
@@ -174,6 +161,16 @@ export default function Informasi() {
               </div>
             </div>
           ))}
+
+          {categories.length === 0 && (
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Icon icon="mdi:calendar-blank-outline" className="w-10 h-10" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-700 mb-2">Belum ada informasi</h3>
+              <p className="text-slate-500">Tidak ada informasi untuk kelurahan yang dipilih saat ini.</p>
+            </div>
+          )}
         </div>
       </section>
 

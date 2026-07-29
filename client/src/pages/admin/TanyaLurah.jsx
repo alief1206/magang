@@ -278,7 +278,7 @@ export default function TanyaLurah() {
                 'Ada yang bisa kami bantu lagi?'
               ]}
             />
-            <ChatInput onSend={handleSendMessage} placeholder="Ketik pesan balasan..." disabled={isDetailLoading} />
+            <ChatInput key={selectedConversationId} onSend={handleSendMessage} placeholder="Ketik pesan balasan..." disabled={isDetailLoading} />
           </div>
         </div>
       </div>
