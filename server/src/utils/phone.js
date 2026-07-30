@@ -19,7 +19,7 @@ function createWhatsappUrl(phoneNumber, message) {
     return ''
   }
 
-  return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`
+  return `https://web.whatsapp.com/send?phone=${normalizedPhone}&text=${encodeURIComponent(message)}`
 }
 
 module.exports = {

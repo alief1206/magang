@@ -19,6 +19,10 @@ export default function TanyaPelayanan() {
   const [conversationId, setConversationId] = useState(null);
   const [guestName, setGuestName] = useState('');
   const [liveMessages, setLiveMessages] = useState([]);
+  const [notification, setNotification] = useState('');
+  
+  const prevLiveMessagesCount = useRef(0);
+  const isFirstFetch = useRef(true);
   
   // BOT / LOCAL STATES
   const [localMessages, setLocalMessages] = useState([
@@ -30,6 +34,8 @@ export default function TanyaPelayanan() {
     }
   ]);
   const [pendingSubject, setPendingSubject] = useState('');
+  const [pendingMessage, setPendingMessage] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [isAwaitingQuestion, setIsAwaitingQuestion] = useState(false);
 
   // FORM STATES
@@ -47,6 +53,15 @@ export default function TanyaPelayanan() {
       .then(res => res.json())
       .then(data => setKelurahans(data.data || []))
       .catch(err => console.error("Failed to fetch kelurahans", err));
+
+    // Restore session from localStorage if exists
+    const savedConversationId = localStorage.getItem('activeConversationId');
+    const savedGuestName = localStorage.getItem('guestName');
+    
+    if (savedConversationId && savedGuestName) {
+      setConversationId(savedConversationId);
+      setGuestName(savedGuestName);
+    }
   }, []);
 
   // Poll for messages if conversation exists (Live mode)
@@ -58,15 +73,37 @@ export default function TanyaPelayanan() {
           .then(res => {
             if (!res.ok) {
               if (res.status === 404) {
-                // If conversation not found, reset state
+                // If conversation not found, reset state and clear localStorage
                 setConversationId(null);
+                setGuestName('');
+                setLiveMessages([]);
+                localStorage.removeItem('activeConversationId');
+                localStorage.removeItem('guestName');
+                alert('Sesi obrolan Anda telah ditutup oleh admin.');
               }
               throw new Error('Failed to fetch conversation');
             }
             return res.json();
           })
           .then(data => {
-            setLiveMessages(data.data.messages || []);
+            const newMessages = data.data.messages || [];
+            setLiveMessages(newMessages);
+
+            if (!isFirstFetch.current && newMessages.length > prevLiveMessagesCount.current) {
+               const lastMessage = newMessages[newMessages.length - 1];
+               if (lastMessage && lastMessage.senderRole !== 'warga') {
+                 setNotification('Pesan baru dari Admin/Lurah!');
+                 setTimeout(() => setNotification(''), 4000);
+                 
+                 // Play notification sound
+                 try {
+                   const audio = new Audio('/notification.mp3');
+                   audio.play().catch(e => e);
+                 } catch(e) {}
+               }
+            }
+            prevLiveMessagesCount.current = newMessages.length;
+            isFirstFetch.current = false;
           })
           .catch(err => console.error(err));
       };
@@ -88,6 +125,7 @@ export default function TanyaPelayanan() {
 
   // BOT INTERACTIONS
   const handleSelectCategory = (topik) => {
+    setSelectedCategory(topik);
     const userMsg = { id: Date.now(), sender: 'user', text: topik };
     const botMsg = { 
       id: Date.now() + 1, 
@@ -139,7 +177,8 @@ export default function TanyaPelayanan() {
         type: 'escalation',
         text: 'Terimakasih atas pertanyaan Anda, pertanyaan Anda akan kami teruskan ke pihak admin. Terimakasih. Silakan lengkapi data diri Anda di bawah ini.'
       }]);
-      setPendingSubject(sentText);
+      setPendingSubject(selectedCategory || 'Pertanyaan Umum');
+      setPendingMessage(sentText);
       setShowDataDiriModal(true);
       setIsAwaitingQuestion(false);
     }, 500);
@@ -155,7 +194,7 @@ export default function TanyaPelayanan() {
         subject: pendingSubject,
         kelurahanId: parseInt(dataDiri.kelurahanId, 10),
         guestName: dataDiri.nama,
-        message: pendingSubject,
+        message: pendingMessage,
       };
 
       const response = await fetch('http://localhost:5000/api/chats', {
@@ -172,7 +211,7 @@ export default function TanyaPelayanan() {
       // Pre-populate live messages to avoid blank space
       setLiveMessages([{
         id: 'temp-' + Date.now(),
-        message: pendingSubject,
+        message: pendingMessage,
         senderRole: 'warga',
         guestName: dataDiri.nama,
         createdAt: new Date().toISOString()
@@ -180,6 +219,11 @@ export default function TanyaPelayanan() {
       
       setConversationId(newConversationId);
       setGuestName(dataDiri.nama);
+      
+      // Save to localStorage
+      localStorage.setItem('activeConversationId', newConversationId);
+      localStorage.setItem('guestName', dataDiri.nama);
+      
       setShowDataDiriModal(false);
       setInputText('');
       
@@ -260,7 +304,21 @@ export default function TanyaPelayanan() {
         <p className="mt-4 font-bold">Mohon kirimkan tangkapan layar (screenshot) halaman ini agar bisa diperbaiki.</p>
       </div>
     )}>
-      <div className="flex flex-col h-[100dvh] bg-[#F0F4F8] font-sans">
+      <div className="flex flex-col h-[100dvh] bg-[#F0F4F8] font-sans relative">
+      
+      {/* Toast Notification */}
+      {notification && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-[#112A46] text-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3 border border-blue-800 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+            <Icon icon="mdi:bell-ring-outline" className="w-6 h-6 text-blue-400" />
+          </div>
+          <span className="font-bold">{notification}</span>
+          <button onClick={() => setNotification('')} className="ml-4 text-slate-400 hover:text-white">
+            <Icon icon="mdi:close" className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       <header className="bg-[#112A46] px-6 py-5 flex items-center gap-4 text-white z-10 shadow-md shrink-0">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-full transition-colors outline-none">
           <Icon icon="mdi:arrow-left" className="w-6 h-6" />

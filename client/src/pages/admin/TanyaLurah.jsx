@@ -131,18 +131,50 @@ export default function TanyaLurah() {
 
   const handleForwardToLurah = async () => {
     if (!selectedConversationId) return;
+    
+    // Buka tab baru sebelum fetch untuk menghindari popup blocker
+    const newWindow = window.open('about:blank', '_blank');
+    
     try {
       const res = await fetch(`http://localhost:5000/api/chats/${selectedConversationId}/forward-to-lurah`, {
         method: 'POST',
         headers: getHeaders()
       });
-      if (!res.ok) throw new Error('Gagal meneruskan ke lurah');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Gagal meneruskan ke lurah');
+      }
       const data = await res.json();
-      alert('Berhasil meneruskan pesan ke Lurah.');
+      
       if (data.data.whatsappUrl) {
-        window.open(data.data.whatsappUrl, '_blank');
+        if (newWindow) newWindow.location.href = data.data.whatsappUrl;
+      } else {
+        if (newWindow) newWindow.close();
       }
       fetchConversationDetail(selectedConversationId);
+      fetchConversations();
+    } catch (err) {
+      if (newWindow) newWindow.close();
+      console.error(err);
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!selectedConversationId) return;
+    
+    if (!window.confirm("Apakah Anda yakin ingin menghapus percakapan ini? Tindakan ini akan menutup obrolan bagi pengguna.")) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`http://localhost:5000/api/chats/${selectedConversationId}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      if (!res.ok) throw new Error('Gagal menghapus percakapan');
+      
+      setSelectedConversationId(null);
       fetchConversations();
     } catch (err) {
       console.error(err);
@@ -241,6 +273,15 @@ export default function TanyaLurah() {
                 Teruskan ke Lurah
               </button>
             )}
+
+            <button
+              onClick={handleDeleteConversation}
+              className="px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors text-sm font-bold flex items-center gap-2"
+              title="Hapus Percakapan"
+            >
+              <Icon icon="mdi:trash-can-outline" className="w-5 h-5" />
+              Hapus
+            </button>
           </div>
         </div>
 
@@ -278,7 +319,13 @@ export default function TanyaLurah() {
                 'Ada yang bisa kami bantu lagi?'
               ]}
             />
-            <ChatInput key={selectedConversationId} onSend={handleSendMessage} placeholder="Ketik pesan balasan..." disabled={isDetailLoading} />
+            <ChatInput 
+              key={selectedConversationId} 
+              onSend={handleSendMessage} 
+              placeholder="Ketik pesan balasan..." 
+              disabled={isDetailLoading}
+              initialValue={selectedConversation?.subject ? `Terkait ${selectedConversation.subject}, ` : ''} 
+            />
           </div>
         </div>
       </div>

@@ -32,8 +32,10 @@ function ensureCanAccessConversation(conversation, user) {
     return
   }
 
-  if (isStaff(user) && Number(conversation.kelurahanId) === Number(user.kelurahanId)) {
-    return
+  if (isStaff(user)) {
+    if (!user.kelurahanId || Number(conversation.kelurahanId) === Number(user.kelurahanId)) {
+      return
+    }
   }
 
   if (user.role === 'warga' && Number(conversation.citizenId) === Number(user.id)) {
@@ -77,7 +79,7 @@ async function createConversation(payload, user) {
     throw createApiError('Kelurahan wajib dipilih.', 400)
   }
 
-  if (isStaff(user) && Number(kelurahanId) !== Number(user.kelurahanId)) {
+  if (isStaff(user) && user.kelurahanId && Number(kelurahanId) !== Number(user.kelurahanId)) {
     throw createApiError('Admin hanya boleh membuat chat untuk kelurahannya sendiri.', 403)
   }
 

@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 
-const ChatInput = ({ onSend, placeholder = 'Ketik pesan...', disabled = false }) => {
-  const [message, setMessage] = useState('');
+const ChatInput = ({ onSend, placeholder = 'Ketik pesan...', disabled = false, initialValue = '' }) => {
+  const [message, setMessage] = useState(initialValue);
+
+  useEffect(() => {
+    setMessage(initialValue);
+  }, [initialValue]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
