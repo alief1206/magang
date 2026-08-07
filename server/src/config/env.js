@@ -8,6 +8,8 @@ module.exports = {
   authTokenSecret: process.env.AUTH_TOKEN_SECRET || 'ganti-secret-token-ini',
   dataEncryptionKey: process.env.DATA_ENCRYPTION_KEY || 'ganti-key-enkripsi-data-ini',
   whatsappWebhookSecret: process.env.WHATSAPP_WEBHOOK_SECRET || '',
+  fonnteToken: process.env.FONNTE_TOKEN || '',
+  nomorLurah: process.env.NOMOR_LURAH || '',
   database: {
     host: process.env.DB_HOST || 'localhost',
     port: Number(process.env.DB_PORT || 3306),

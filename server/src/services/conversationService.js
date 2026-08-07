@@ -193,7 +193,11 @@ async function deleteMessage(conversationId, messageId, user) {
 async function forwardToLurah(conversationId, payload, user) {
   const conversation = await getConversationById(conversationId, user)
   const kelurahan = await kelurahanModel.findById(conversation.kelurahanId)
-  const lurahWhatsappNumber = payload.lurahWhatsappNumber || kelurahan.lurahWhatsappNumber
+  const lurahWhatsappNumber =
+    payload.lurahWhatsappNumber ||
+    (kelurahan && kelurahan.lurahWhatsappNumber) ||
+    process.env.NOMOR_LURAH ||
+    '6281939618312'
   const normalizedPhone = phoneUtils.normalizePhoneNumber(lurahWhatsappNumber)
 
   if (!normalizedPhone) {

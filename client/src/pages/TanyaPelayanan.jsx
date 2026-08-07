@@ -124,7 +124,17 @@ export default function TanyaPelayanan() {
   };
 
   // BOT INTERACTIONS
+  const resetSession = () => {
+    setConversationId(null);
+    setLiveMessages([]);
+    localStorage.removeItem('activeConversationId');
+    localStorage.removeItem('guestName');
+    prevLiveMessagesCount.current = 0;
+    isFirstFetch.current = true;
+  };
+
   const handleSelectCategory = (topik) => {
+    resetSession();
     setSelectedCategory(topik);
     const userMsg = { id: Date.now(), sender: 'user', text: topik };
     const botMsg = { 
@@ -145,6 +155,7 @@ export default function TanyaPelayanan() {
         text: 'Terima kasih! Senang bisa membantu Anda. Ada yang lain?'
       }]);
     } else {
+      resetSession();
       setLocalMessages(prev => [...prev, {
         id: Date.now(),
         sender: 'bot',
@@ -463,7 +474,7 @@ export default function TanyaPelayanan() {
           }
 
           const isUser = msg.senderRole === 'warga';
-          const isLurah = msg.senderRole === 'lurah';
+          const isLurah = msg.senderRole === 'lurah' || msg.source === 'whatsapp';
           
           return (
             <div 
@@ -471,19 +482,28 @@ export default function TanyaPelayanan() {
               className={`flex ${isUser ? 'justify-end' : 'justify-start'} gap-4 animate-in fade-in zoom-in duration-200`}
             >
               {!isUser && (
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 border shadow-sm mt-1 ${isLurah ? 'bg-amber-50 border-amber-200' : 'bg-[#E5EFFA] border-blue-100'}`}>
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 border shadow-sm mt-1 ${isLurah ? 'bg-emerald-50 border-emerald-300 text-emerald-600 ring-2 ring-emerald-400/30' : 'bg-[#E5EFFA] border-blue-100 text-blue-600'}`}>
                   {isLurah ? (
-                     <Icon icon="mdi:account-tie" className="w-6 h-6 text-amber-600" />
+                     <Icon icon="mdi:account-tie-voice" className="w-6 h-6" />
                   ) : (
-                     <Icon icon="mdi:shield-account" className="w-6 h-6 text-blue-600" />
+                     <Icon icon="mdi:shield-account" className="w-6 h-6" />
                   )}
                 </div>
               )}
               <div className="flex flex-col gap-1 max-w-[80%]">
                 {!isUser && (
-                  <span className="text-xs font-semibold ml-2 text-slate-500 flex items-center gap-1">
-                    {isLurah ? 'Bapak/Ibu Lurah' : 'Admin Kelurahan'}
-                    {msg.source === 'whatsapp' && <Icon icon="mdi:whatsapp" className="text-emerald-500" />}
+                  <span className="text-xs font-semibold ml-1 flex items-center gap-1">
+                    {isLurah ? (
+                      <span className="text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full flex items-center gap-1 font-bold shadow-xs">
+                        <Icon icon="mdi:whatsapp" className="w-4 h-4 text-emerald-600 animate-pulse" />
+                        Jawaban Resmi Pak Lurah (via WhatsApp)
+                      </span>
+                    ) : (
+                      <span className="text-blue-700 font-bold flex items-center gap-1">
+                        <Icon icon="mdi:shield-check" className="w-4 h-4 text-blue-600" />
+                        Admin Kelurahan
+                      </span>
+                    )}
                   </span>
                 )}
                 <div 
@@ -491,7 +511,7 @@ export default function TanyaPelayanan() {
                     ${isUser 
                       ? 'bg-blue-600 text-white rounded-tr-none' 
                       : isLurah 
-                        ? 'bg-amber-100 text-amber-900 rounded-tl-none border border-amber-200'
+                        ? 'bg-gradient-to-br from-emerald-50 to-white text-slate-800 rounded-tl-none border-2 border-emerald-400 shadow-md'
                         : 'bg-white text-slate-700 rounded-tl-none border border-slate-200'}`}
                 >
                   {msg.message}

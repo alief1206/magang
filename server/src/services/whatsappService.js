@@ -1,3 +1,4 @@
+const axios = require('axios')
 const aspirationService = require('./aspirationService')
 const conversationService = require('./conversationService')
 const createApiError = require('../utils/apiError')
@@ -66,10 +67,56 @@ async function receiveAspiration(payload) {
     source: 'whatsapp',
   }
 
+  // Logika Eskalasi Darurat menggunakan API Fonnte
+  const contentLower = String(aspirationPayload.description || '').toLowerCase()
+  const emergencyKeywords = ['darurat', 'urgent', 'ketemu lurah', 'tatap muka']
+
+  if (emergencyKeywords.some((keyword) => contentLower.includes(keyword))) {
+    const fonnteToken = process.env.FONNTE_TOKEN
+    const nomorLurah = process.env.NOMOR_LURAH
+    const senderPhone = aspirationPayload.whatsappSenderPhone || payload.fromPhone
+
+    if (fonnteToken) {
+      const headers = { Authorization: fonnteToken }
+
+      try {
+        // 1. Kirim notifikasi darurat ke nomor WhatsApp Lurah
+        if (nomorLurah) {
+          await axios.post(
+            'https://api.fonnte.com/send',
+            {
+              target: nomorLurah,
+              message: `[🚨 DARURAT] Laporan masuk!\nDari: ${senderPhone}\nIsi: ${aspirationPayload.description}`,
+            },
+            { headers }
+          )
+        }
+
+        // 2. Kirim notifikasi konfirmasi ke nomor WhatsApp Warga (pengirim)
+        if (senderPhone) {
+          await axios.post(
+            'https://api.fonnte.com/send',
+            {
+              target: senderPhone,
+              message:
+                'Laporan darurat Anda telah diterima dan sedang diteruskan langsung ke Bapak/Ibu Lurah. Mohon standby.',
+            },
+            { headers }
+          )
+        }
+      } catch (err) {
+        console.error('Gagal mengirim pesan darurat via Fonnte:', err?.response?.data || err.message)
+      }
+    }
+  }
+
   return aspirationService.createAspiration(aspirationPayload, null)
 }
 
 async function receiveChatReply(payload) {
+  // Tambahan log pelacak untuk melihat isi data dari Fonnte di terminal
+  console.log("=== RAW PAYLOAD DARI FONNTE ===", JSON.stringify(payload, null, 2));
+
   const reply = extractConversationReply(payload)
 
   if (!reply.message) {
