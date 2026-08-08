@@ -48,6 +48,15 @@ export default function LoginAdmin() {
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-[100px] -translate-y-1/3 translate-x-1/3 z-0"></div>
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[80px] translate-y-1/3 -translate-x-1/3 z-0"></div>
 
+      {/* Tombol Kembali ke Beranda */}
+      <button
+        onClick={() => navigate('/')}
+        className="absolute top-6 left-6 lg:top-10 lg:left-10 z-50 flex items-center justify-center w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-md border border-white/20 shadow-lg"
+        title="Kembali ke Beranda"
+      >
+        <Icon icon="mdi:arrow-left" className="w-7 h-7" />
+      </button>
+
       <motion.div 
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}

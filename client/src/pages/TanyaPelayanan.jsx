@@ -12,6 +12,104 @@ const pelayananData = {
   "Layanan Administrasi": "Pelayanan administrasi seperti pembuatan KTP, KK, atau Surat Keterangan beroperasi dari Senin-Jumat pukul 08:00 - 15:00 WIB."
 };
 
+const layananAdministrasiList = [
+  {
+    id: 1,
+    name: "Kartu Tanda Penduduk (KTP)/ Pemula/ Perubahan/ Kehilangan",
+    syarat: `Persyaratan Penerbitan KTP:\n1. Pengantar Ketua RT diketahui RW\n2. KK Asli\n3. Surat Laporan kehilangan dari Kepolisian apabila KTP dan KK Asli Hilang.\n4. Pas Foto 3x4 Cm 2 lembar (Untuk tahun lahir ganjil background warna MERAH dan tahun lahir genap background warna BIRU)\n5. Bukti Pelunasan PBB`
+  },
+  {
+    id: 2,
+    name: "Kartu Keluarga (KK)",
+    syarat: `Persyaratan Kartu Keluarga (KK):\n1. Pengantar Ketua RT diketahui RW\n2. KK Asli (Untuk Perubahan)\n3. KTP Anggota keluarga\n4. Surat Laporan kehilangan dari Polri apabila KTP dan KK Asli Hilang.\n5. FC Akta Nikah\n6. Surat Kelahiran dari Bidan/ RS untuk penambahan anggota keluarga\n7. FC Surat Pindah datang (bagi penduduk yang baru pindah)\n8. Bukti Pelunasan PBB.`
+  },
+  {
+    id: 3,
+    name: "Pendaftaran Penduduk Pindah Datang (WNI)",
+    syarat: `Persyaratan Pendaftaran Penduduk Pindah Datang (WNI):\n1. Surat Pengantar Ketua RT diketahui RW\n2. Surat Pindah dari tempat asal dan lampirannya\n3. Rekomendasi dari Dispenduk Capil (bagi penduduk yang pindah dari luar kabupaten/ provinsi)\n4. Sertifikat Vaksin Covid 19`
+  },
+  {
+    id: 4,
+    name: "Pendaftaran Penduduk Pindah Keluar (WNI)",
+    syarat: `Persyaratan Pendaftaran Penduduk Pindah Keluar (WNI):\n1. Surat Pengantar Ketua RT diketahui RW\n2. KTP dan KK\n3. Pas foto 3x4 Cm : 4 lembar untuk pindah dalam satu kecamatan, luar kecamatan 6 lembar\n4. SKCK untuk pindah luar Kecamatan/ Kabupaten\n5. Bukti Pelunasan PBB.`
+  },
+  {
+    id: 5,
+    name: "Surat Keterangan Bepergian",
+    syarat: `Persyaratan Surat Keterangan Bepergian:\n1. Surat Pengantar Ketua RT diketahui RW\n2. KK dan KTP\n3. Pas Foto 3x4 Cm 2 lembar\n4. Surat Persetujuan Keluarga (Orang tua/ Suami/ Isteri)\n5. Bukti Pelunasan PBB.`
+  },
+  {
+    id: 6,
+    name: "Pendaftaran Kelahiran/ Keterangan Kelahiran",
+    syarat: `Persyaratan Pendaftaran Kelahiran/ Keterangan Kelahiran:\n1. Surat Pengantar Ketua RT diketahui RW\n2. KK dan KTP orang tua\n3. Surat Nikah/ Akta Perkawinan orang tua\n4. Keterangan kelahiran dari bidan/ RS yang menolong persalinan\n5. KTP 2 orang saksi\n6. Bukti Pelunasan PBB.`
+  },
+  {
+    id: 7,
+    name: "Pencatatan lahir mati/ Pendaftaran Kematian/ Keterangan Kematian",
+    syarat: `Persyaratan Pencatatan lahir mati/ Surat kematian:\n1. Surat Pengantar Ketua RT diketahui RW\n2. KK dan KTP\n3. Surat Nikah/ Akta Perkawinan\n4. Surat keterangan kematian dari dokter/ paramedis\n5. Surat keterangan dari Kepolisian\n6. Bukti Pelunasan PBB.`
+  },
+  {
+    id: 8,
+    name: "Surat Pengantar Permohonan Rekomendasi Ijin Keramaian",
+    syarat: `Persyaratan Surat Pengantar Permohonan Rekomendasi Ijin Keramaian:\n1. Pengantar Ketua RT diketahui RW\n2. KK dan KTP\n3. Ketentuan lain terkait masa pandemi\n4. Bukti Pelunasan PBB`
+  },
+  {
+    id: 9,
+    name: "Surat Pernyataan Miskin (SPM)",
+    syarat: `Persyaratan Surat Pernyataan Miskin (SPM):\n1. Pengantar Ketua RT diketahui RW\n2. KK dan KTP\n3. Surat Rujukan dari Faskes I (Puskesmas/ Dokter praktik)\n4. Bukti Pelunasan PBB`
+  },
+  {
+    id: 10,
+    name: "Surat Keterangan Tidak Mampu (SKTM)",
+    syarat: `Persyaratan Surat Keterangan Tidak Mampu (SKTM):\n1. Pengantar Ketua RT diketahui RW\n2. KK dan KTP dan Kartu Pelajar/ Mahasiswa\n3. Bukti Bukti Lunas PBB`
+  },
+  {
+    id: 11,
+    name: "Surat Keterangan Belum Menikah (SKBM)",
+    syarat: `Persyaratan Surat Keterangan Belum Menikah (SKBM):\n1. Surat Pengantar Ketua RT diketahui RW\n2. Pernyataan belum pernah menikah diketahui Orang tua/ RT dan RW\n3. KK dan KTP\n4. Bukti Pelunasan PBB`
+  },
+  {
+    id: 12,
+    name: "Surat Keterangan Usaha",
+    syarat: `Persyaratan Surat Keterangan Usaha:\n1. Surat Pengantar Ketua RT diketahui RW\n2. KK dan KTP\n3. Bukti Kepemilikan Usaha/ Foto usaha/ pernyataan mempunyai usaha\n4. SPPT dan Bukti Pelunasan PBB`
+  },
+  {
+    id: 13,
+    name: "Surat Keterangan Pendaftaran Pernikahan",
+    syarat: `Persyaratan Surat Keterangan Pendaftaran Pernikahan:\n1. Surat Pengantar Ketua RT diketahui RW\n2. Persetujuan Orang Tua bagi pasangan calon pengantin yang berusia minimal 19 tahun\n3. KTP dan KK orang tua\n4. Ijazah dan Akte Kelahiran\n5. KTP 2 orang saksi\n6. Foto pasangan calon pengantin 3x3 dalam 1 lembar sebanyak 4 lembar\n7. Materai 2 lembar\n8. Akta Perceraian (bila cerai hidup)\n9. Akta Kematian (bila cerai mati)\n10. Bukti Pelunasan PBB`
+  },
+  {
+    id: 14,
+    name: "Surat Keterangan Domisili Usaha/ Perusahaan/ Penduduk Sementara",
+    syarat: `Persyaratan Surat Keterangan Domisili Usaha/ Perusahaan/ Penduduk Sementara:\n1. Surat Pengantar Ketua RT diketahui RW\n2. KK dan KTP\n3. Bukti Kepemilikan usaha/ perusahaan (akta pendirian/ NIB)\n4. SPPT dan Bukti Pelunasan PBB`
+  },
+  {
+    id: 15,
+    name: "Surat Keterangan Taksiran Harga Tanah",
+    syarat: `Persyaratan Surat Keterangan Perkiraan/ Taksiran Harga Tanah:\n1. Surat Pengantar Ketua RT diketahui RW\n2. KK dan KTP Pemohon\n3. Bukti Kepemilikan Tanah\n4. Surat Pernyataan bermaterai mengetahui Ketua RT/ RW dan Tetangga sebelah objek\n5. SPPT dan Bukti Pelunasan PBB`
+  },
+  {
+    id: 16,
+    name: "Surat Keterangan/ Pernyataan Waris",
+    syarat: `Persyaratan Surat Keterangan/ Pernyataan Waris:\n1. Surat Pengantar Ketua RT diketahui RW\n2. KK dan KTP Ahli Waris\n3. Bukti Kepemilikan/ Pernyataan tentang status tanah yang dimohon\n4. Silsilah Keluarga Ahli Waris\n5. SPPT dan Bukti Pelunasan PBB\n6. Materai 1 lembar\n7. KTP 2 orang saksi\n8. Akta Kelahiran seluruh ahli waris`
+  },
+  {
+    id: 17,
+    name: "Surat Kuasa",
+    syarat: `Persyaratan Surat Kuasa:\n1. Pengantar Ketua RT diketahui RW\n2. KK dan KTP masing-masing pihak\n3. Materai 1 lembar\n4. Bukti Pelunasan PBB`
+  },
+  {
+    id: 18,
+    name: "Permohonan Tandatangan Mengetahui/ Legalisir",
+    syarat: `Persyaratan Permohonan Tandatangan Mengetahui/ Legalisir:\n1. Surat Pengantar Ketua RT/ RW\n2. KK dan KTP\n3. Surat/ Dokumen Asli yang dilegalisir\n4. Bukti Pelunasan PBB`
+  },
+  {
+    id: 19,
+    name: "Surat keterangan Lainnya",
+    syarat: `Persyaratan Surat Keterangan Lainnya:\n1. Surat Pengantar Ketua RT/ RW\n2. KK dan KTP\n3. Dokumen Pendukung (Wajib ada)\n4. Bukti Pelunasan PBB`
+  }
+];
+
 export default function TanyaPelayanan() {
   const navigate = useNavigate();
   
@@ -25,18 +123,27 @@ export default function TanyaPelayanan() {
   const isFirstFetch = useRef(true);
   
   // BOT / LOCAL STATES
-  const [localMessages, setLocalMessages] = useState([
-    {
-      id: 1,
-      sender: 'bot',
-      type: 'greeting',
-      text: 'Halo! Saya asisten virtual Kelurahan. Silakan pilih topik pelayanan di bawah ini atau ketik langsung pertanyaan Anda.'
+  const [localMessages, setLocalMessages] = useState(() => {
+    const saved = localStorage.getItem('botChatHistory');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
     }
-  ]);
+    return [
+      {
+        id: 1,
+        sender: 'bot',
+        type: 'greeting',
+        text: 'Halo! Saya asisten virtual Kelurahan. Silakan pilih topik pelayanan di bawah ini atau ketik langsung pertanyaan Anda.'
+      }
+    ];
+  });
   const [pendingSubject, setPendingSubject] = useState('');
   const [pendingMessage, setPendingMessage] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isAwaitingQuestion, setIsAwaitingQuestion] = useState(false);
+  const [isAwaitingMoreHelp, setIsAwaitingMoreHelp] = useState(false);
 
   // FORM STATES
   const [inputText, setInputText] = useState("");
@@ -118,6 +225,10 @@ export default function TanyaPelayanan() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [localMessages, liveMessages]);
 
+  useEffect(() => {
+    localStorage.setItem('botChatHistory', JSON.stringify(localMessages));
+  }, [localMessages]);
+
   const handleDataDiriChange = (e) => {
     const { name, value } = e.target;
     setDataDiri(prev => ({ ...prev, [name]: value }));
@@ -131,20 +242,48 @@ export default function TanyaPelayanan() {
     localStorage.removeItem('guestName');
     prevLiveMessagesCount.current = 0;
     isFirstFetch.current = true;
+    setIsAwaitingMoreHelp(false);
   };
 
   const handleSelectCategory = (topik) => {
     resetSession();
     setSelectedCategory(topik);
     const userMsg = { id: Date.now(), sender: 'user', text: topik };
-    const botMsg = { 
-      id: Date.now() + 1, 
-      sender: 'bot', 
-      type: 'confirmation',
-      text: pelayananData[topik],
-      originalSubject: topik
-    };
-    setLocalMessages(prev => [...prev, userMsg, botMsg]);
+    
+    if (topik === 'Layanan Administrasi') {
+      const botMsg = { 
+        id: Date.now() + 1, 
+        sender: 'bot', 
+        type: 'layanan_list'
+      };
+      setLocalMessages(prev => [...prev, userMsg, botMsg]);
+    } else {
+      const botMsg = { 
+        id: Date.now() + 1, 
+        sender: 'bot', 
+        type: 'confirmation',
+        text: pelayananData[topik],
+        originalSubject: topik
+      };
+      setLocalMessages(prev => [...prev, userMsg, botMsg]);
+    }
+  };
+
+  const handleSelectSubCategory = (layananId) => {
+    if (!layananId) return;
+    setIsAwaitingMoreHelp(false);
+    const layanan = layananAdministrasiList.find(l => l.id === parseInt(layananId));
+    if (layanan) {
+      const userMsg = { id: Date.now(), sender: 'user', text: layanan.name };
+      const botMsg = { 
+        id: Date.now() + 1, 
+        sender: 'bot', 
+        type: 'confirmation',
+        text: layanan.syarat,
+        originalSubject: 'Layanan Administrasi: ' + layanan.name
+      };
+      setLocalMessages(prev => [...prev, userMsg, botMsg]);
+    }
   };
 
   const handleConfirmation = (isHelpful, subject) => {
@@ -154,6 +293,7 @@ export default function TanyaPelayanan() {
         sender: 'bot',
         text: 'Terima kasih! Senang bisa membantu Anda. Ada yang lain?'
       }]);
+      setIsAwaitingMoreHelp(true);
     } else {
       resetSession();
       setLocalMessages(prev => [...prev, {
@@ -162,6 +302,7 @@ export default function TanyaPelayanan() {
         text: 'Silakan ketikkan pertanyaan Anda.'
       }]);
       setIsAwaitingQuestion(true);
+      setIsAwaitingMoreHelp(false);
     }
   };
 
@@ -179,6 +320,41 @@ export default function TanyaPelayanan() {
       sender: 'user',
       text: sentText
     }]);
+
+    if (isAwaitingMoreHelp) {
+      const lowerText = sentText.toLowerCase();
+      const isNegative = ['tidak', 'nggak', 'enggak', 'engga', 'tdk', 'ga', 'gak'].some(w => lowerText.includes(w));
+      
+      if (isNegative) {
+        setIsAwaitingMoreHelp(false);
+        setTimeout(() => {
+          setLocalMessages(prev => [...prev, {
+            id: Date.now() + 1,
+            sender: 'bot',
+            type: 'greeting',
+            text: 'Baik. Silakan pilih topik pelayanan di bawah ini atau ketik langsung pertanyaan Anda jika ada keperluan lain.'
+          }]);
+        }, 500);
+        return;
+      }
+      
+      const isPositive = ['ya', 'iya', 'ada'].includes(lowerText);
+      if (isPositive) {
+        setIsAwaitingMoreHelp(false);
+        setIsAwaitingQuestion(true);
+        setTimeout(() => {
+          setLocalMessages(prev => [...prev, {
+            id: Date.now() + 1,
+            sender: 'bot',
+            text: 'Silakan ketikkan pertanyaan Anda.'
+          }]);
+        }, 500);
+        return;
+      }
+      
+      // If neither, assume it's their actual question, reset flag and fall through to escalation
+      setIsAwaitingMoreHelp(false);
+    }
 
     // Push bot escalation
     setTimeout(() => {
@@ -439,6 +615,39 @@ export default function TanyaPelayanan() {
                       <Icon icon="mdi:check-circle" className="w-5 h-5" /> Data Diri Terkirim
                     </div>
                   )}
+                </div>
+              </div>
+            );
+          }
+
+          if (msg.type === 'layanan_list') {
+            return (
+              <div key={msg.id} className="flex items-start gap-4 animate-in fade-in zoom-in duration-200">
+                <div className="w-11 h-11 rounded-full bg-[#E5EFFA] flex items-center justify-center flex-shrink-0 border border-blue-100 shadow-sm mt-1">
+                  <Icon icon="mdi:robot-outline" className="w-7 h-7 text-blue-600" />
+                </div>
+                <div className="flex flex-col gap-3 w-full">
+                  <div className="bg-white px-6 py-5 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100 text-slate-700 text-[15px] leading-relaxed max-w-[800px]">
+                    Silakan pilih layanan administrasi yang Anda butuhkan pada pilihan di bawah ini:
+                  </div>
+                  <div className="bg-white p-6 lg:p-8 rounded-2xl shadow-sm border border-slate-100 w-fit rounded-tl-none">
+                    <h3 className="font-extrabold text-[#112A46] text-[16px] mb-5 flex items-center gap-2 border-b border-slate-100 pb-4">
+                      <Icon icon="mdi:file-document-outline" className="w-6 h-6 text-blue-500" />
+                      Layanan Administrasi
+                    </h3>
+                    <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                      {layananAdministrasiList.map((layanan) => (
+                        <button
+                          key={layanan.id}
+                          onClick={() => handleSelectSubCategory(layanan.id)}
+                          className="text-left px-5 py-4 rounded-xl bg-slate-50 hover:bg-[#F0F6FF] border border-transparent hover:border-blue-200 text-slate-700 hover:text-blue-700 font-medium transition-all duration-200 flex items-center justify-between outline-none cursor-pointer text-[15px]"
+                        >
+                          <span className="max-w-[280px] sm:max-w-[350px]">{layanan.name}</span>
+                          <Icon icon="mdi:chevron-right" className="w-5 h-5 ml-6 opacity-50 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             );

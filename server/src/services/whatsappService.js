@@ -54,7 +54,7 @@ async function receiveAspiration(payload) {
   const aspirationPayload = {
     ...parsedMessage,
     ...payload,
-    name: payload.name || parsedMessage.name || payload.fromName,
+    name: payload.name || parsedMessage.name || payload.fromName || payload.pushname,
     category: payload.category || parsedMessage.category || 'whatsapp',
     shortTitle:
       payload.shortTitle ||
@@ -62,8 +62,8 @@ async function receiveAspiration(payload) {
       String(payload.message || '').slice(0, 100) ||
       'Aspirasi dari WhatsApp',
     description: payload.description || parsedMessage.description || payload.message,
-    whatsappSenderPhone: phoneUtils.normalizePhoneNumber(payload.fromPhone),
-    whatsappMessageId: payload.messageId,
+    whatsappSenderPhone: phoneUtils.normalizePhoneNumber(payload.fromPhone || payload.sender),
+    whatsappMessageId: payload.messageId || payload.id,
     source: 'whatsapp',
   }
 
@@ -74,7 +74,7 @@ async function receiveAspiration(payload) {
   if (emergencyKeywords.some((keyword) => contentLower.includes(keyword))) {
     const fonnteToken = process.env.FONNTE_TOKEN
     const nomorLurah = process.env.NOMOR_LURAH
-    const senderPhone = aspirationPayload.whatsappSenderPhone || payload.fromPhone
+    const senderPhone = aspirationPayload.whatsappSenderPhone || payload.fromPhone || payload.sender
 
     if (fonnteToken) {
       const headers = { Authorization: fonnteToken }
@@ -124,9 +124,9 @@ async function receiveChatReply(payload) {
   }
 
   return conversationService.addLurahWhatsappReply(reply.conversationId, {
-    fromPhone: payload.fromPhone,
+    fromPhone: payload.fromPhone || payload.sender,
     message: reply.message,
-    messageId: payload.messageId,
+    messageId: payload.messageId || payload.id,
   })
 }
 

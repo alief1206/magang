@@ -43,9 +43,16 @@ export default function TanyaLurah() {
   }, [token]);
 
   useEffect(() => {
+    let detailInterval;
     if (selectedConversationId) {
-      fetchConversationDetail(selectedConversationId);
+      fetchConversationDetail(selectedConversationId, true);
+      detailInterval = setInterval(() => {
+        fetchConversationDetail(selectedConversationId, false);
+      }, 3000);
     }
+    return () => {
+      if (detailInterval) clearInterval(detailInterval);
+    };
   }, [selectedConversationId]);
 
   useEffect(() => {
@@ -96,9 +103,9 @@ export default function TanyaLurah() {
     }
   };
 
-  const fetchConversationDetail = async (id) => {
+  const fetchConversationDetail = async (id, showLoading = true) => {
     try {
-      setIsDetailLoading(true);
+      if (showLoading) setIsDetailLoading(true);
       const res = await fetch(`http://localhost:5000/api/chats/${id}`, { headers: getHeaders() });
       if (!res.ok) throw new Error('Gagal memuat detail percakapan');
       const data = await res.json();
@@ -106,9 +113,9 @@ export default function TanyaLurah() {
       setMessages(data.data.messages || []);
     } catch (err) {
       console.error(err);
-      alert(err.message);
+      if (showLoading) alert(err.message);
     } finally {
-      setIsDetailLoading(false);
+      if (showLoading) setIsDetailLoading(false);
     }
   };
 
