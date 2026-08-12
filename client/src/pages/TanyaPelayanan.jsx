@@ -186,6 +186,13 @@ export default function TanyaPelayanan() {
                 setLiveMessages([]);
                 localStorage.removeItem('activeConversationId');
                 localStorage.removeItem('guestName');
+                localStorage.removeItem('botChatHistory');
+                setLocalMessages([{
+                  id: 1,
+                  sender: 'bot',
+                  type: 'greeting',
+                  text: 'Halo! Saya asisten virtual Kelurahan. Silakan pilih topik pelayanan di bawah ini atau ketik langsung pertanyaan Anda.'
+                }]);
                 alert('Sesi obrolan Anda telah ditutup oleh admin.');
               }
               throw new Error('Failed to fetch conversation');
@@ -459,7 +466,24 @@ export default function TanyaPelayanan() {
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error('Gagal mengirim pesan');
+      if (!response.ok) {
+        if (response.status === 404) {
+          setConversationId(null);
+          setGuestName('');
+          setLiveMessages([]);
+          localStorage.removeItem('activeConversationId');
+          localStorage.removeItem('guestName');
+          localStorage.removeItem('botChatHistory');
+          setLocalMessages([{
+            id: 1,
+            sender: 'bot',
+            type: 'greeting',
+            text: 'Halo! Saya asisten virtual Kelurahan. Silakan pilih topik pelayanan di bawah ini atau ketik langsung pertanyaan Anda.'
+          }]);
+          alert('Sesi obrolan Anda telah ditutup oleh admin.');
+        }
+        throw new Error('Gagal mengirim pesan');
+      }
       
       const data = await response.json();
       

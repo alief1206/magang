@@ -43,7 +43,15 @@ export default function TanyaLurah() {
   const fetchServerChat = async (chatId) => {
     try {
       const res = await fetch(`http://localhost:5000/api/chats/${chatId}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        if (res.status === 404) {
+          // Jika chat dihapus oleh admin, reset state ke awal
+          setActiveChatId(null);
+          localStorage.removeItem('userActiveChatId');
+          setChatInfo(null);
+        }
+        return;
+      }
       const data = await res.json();
       const conversation = data.data;
 
@@ -95,13 +103,21 @@ export default function TanyaLurah() {
 
     if (activeChatId) {
       try {
-        await fetch(`http://localhost:5000/api/chats/${activeChatId}/messages`, {
+        const res = await fetch(`http://localhost:5000/api/chats/${activeChatId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: currentText })
         });
-        fetchServerChat(activeChatId);
-        return;
+        
+        if (!res.ok && res.status === 404) {
+          // Chat sudah dihapus, reset dan lanjut ke blok pembuatan chat baru
+          setActiveChatId(null);
+          localStorage.removeItem('userActiveChatId');
+          setChatInfo(null);
+        } else {
+          fetchServerChat(activeChatId);
+          return;
+        }
       } catch (err) {
         console.error(err);
       }
