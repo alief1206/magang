@@ -1,6 +1,8 @@
 const crypto = require('crypto')
 const { promisify } = require('util')
 
+const bcrypt = require('bcryptjs')
+
 const scrypt = promisify(crypto.scrypt)
 
 async function hashPassword(password) {
@@ -11,7 +13,19 @@ async function hashPassword(password) {
 }
 
 async function verifyPassword(password, storedPassword) {
-  if (!storedPassword || !storedPassword.startsWith('scrypt:')) {
+  if (!storedPassword) {
+    return false
+  }
+
+  if (
+    storedPassword.startsWith('$2a$') ||
+    storedPassword.startsWith('$2b$') ||
+    storedPassword.startsWith('$2y$')
+  ) {
+    return bcrypt.compare(String(password), storedPassword)
+  }
+
+  if (!storedPassword.startsWith('scrypt:')) {
     return false
   }
 

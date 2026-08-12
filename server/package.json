@@ -6,6 +6,7 @@
   "scripts": {
     "data:encrypt": "node src/database/encryptExistingData.js",
     "db:migrate": "node src/database/migrate.js",
+    "db:seed": "node src/database/seed.js",
     "dev": "nodemon index.js",
     "start": "node index.js"
   },
@@ -15,6 +16,7 @@
   "type": "commonjs",
   "dependencies": {
     "axios": "^1.18.1",
+    "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
