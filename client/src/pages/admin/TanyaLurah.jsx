@@ -139,9 +139,6 @@ export default function TanyaLurah() {
   const handleForwardToLurah = async () => {
     if (!selectedConversationId) return;
     
-    // Buka tab baru sebelum fetch untuk menghindari popup blocker
-    const newWindow = window.open('about:blank', '_blank');
-    
     try {
       const res = await fetch(`http://localhost:5000/api/chats/${selectedConversationId}/forward-to-lurah`, {
         method: 'POST',
@@ -151,17 +148,9 @@ export default function TanyaLurah() {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || 'Gagal meneruskan ke lurah');
       }
-      const data = await res.json();
-      
-      if (data.data.whatsappUrl) {
-        if (newWindow) newWindow.location.href = data.data.whatsappUrl;
-      } else {
-        if (newWindow) newWindow.close();
-      }
       fetchConversationDetail(selectedConversationId);
       fetchConversations();
     } catch (err) {
-      if (newWindow) newWindow.close();
       console.error(err);
       alert(err.message);
     }
@@ -266,17 +255,17 @@ export default function TanyaLurah() {
               </span>
             )}
             
-            {selectedConversation?.forwardedToLurahPhone ? (
+            {selectedConversation?.targetRole === 'lurah' || selectedConversation?.forwardedToLurahPhone ? (
               <div className="px-4 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-sm font-bold flex items-center gap-2">
-                <Icon icon="logos:whatsapp-icon" className="w-4 h-4" />
-                Sudah diteruskan
+                <Icon icon="mdi:account-tie" className="w-4 h-4" />
+                Tujuan: Pak Lurah
               </div>
             ) : (
               <button
                 onClick={handleForwardToLurah}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors text-sm font-bold flex items-center gap-2 shadow-sm shadow-emerald-500/20"
+                className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-sm font-bold flex items-center gap-2 shadow-sm shadow-emerald-500/20"
               >
-                <Icon icon="logos:whatsapp-icon" className="w-5 h-5" />
+                <Icon icon="mdi:database-send" className="w-5 h-5" />
                 Teruskan ke Lurah
               </button>
             )}
@@ -432,8 +421,8 @@ export default function TanyaLurah() {
                           {new Date(msg.lastMessageAt).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
-                      {msg.forwardedToLurahPhone && (
-                        <Icon icon="logos:whatsapp-icon" className="w-4 h-4" title="Diteruskan ke Lurah" />
+                      {(msg.targetRole === 'lurah' || msg.forwardedToLurahPhone) && (
+                        <Icon icon="mdi:account-tie" className="w-4 h-4 text-emerald-600" title="Tujuan: Pak Lurah" />
                       )}
                     </div>
                     <p className="text-[14px] text-slate-600 truncate">{msg.subject}</p>

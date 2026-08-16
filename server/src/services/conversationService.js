@@ -192,39 +192,13 @@ async function deleteMessage(conversationId, messageId, user) {
 
 async function forwardToLurah(conversationId, payload, user) {
   const conversation = await getConversationById(conversationId, user)
-  const kelurahan = await kelurahanModel.findById(conversation.kelurahanId)
-  const lurahWhatsappNumber =
-    payload.lurahWhatsappNumber ||
-    (kelurahan && kelurahan.lurahWhatsappNumber) ||
-    process.env.NOMOR_LURAH ||
-    '6281939618312'
-  const normalizedPhone = phoneUtils.normalizePhoneNumber(lurahWhatsappNumber)
 
-  if (!normalizedPhone) {
-    throw createApiError('Nomor WhatsApp lurah belum diisi di data kelurahan.', 400)
-  }
+  const updatedConversation = await conversationModel.update(conversation.id, {
+    targetRole: 'lurah',
+    forwardedToLurahAt: new Date(),
+  })
 
-  const forwardMessage =
-    payload.message ||
-    [
-      'Assalamualaikum Pak Lurah, mohon tanggapan untuk chat warga.',
-      '',
-      `Kode chat: CHAT-${conversation.id}`,
-      `Kelurahan: ${conversation.kelurahanName || '-'}`,
-      `Subjek: ${conversation.subject || '-'}`,
-      '',
-      'Balas melalui WhatsApp dengan format:',
-      `CHAT-${conversation.id}: tulis balasan di sini`,
-    ].join('\n')
-
-  await conversationModel.markForwardedToLurah(conversation.id, normalizedPhone)
-
-  return {
-    conversationId: conversation.id,
-    lurahWhatsappNumber: normalizedPhone,
-    whatsappMessage: forwardMessage,
-    whatsappUrl: phoneUtils.createWhatsappUrl(normalizedPhone, forwardMessage),
-  }
+  return updatedConversation
 }
 
 async function addLurahWhatsappReply(conversationId, payload) {
