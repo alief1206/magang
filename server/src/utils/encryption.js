@@ -40,19 +40,24 @@ function decryptText(value) {
     return text
   }
 
-  const [, , ivValue, authTagValue, encryptedValue] = text.split(':')
-  const decipher = crypto.createDecipheriv(
-    'aes-256-gcm',
-    getKey(),
-    Buffer.from(ivValue, 'base64url'),
-  )
+  try {
+    const [, , ivValue, authTagValue, encryptedValue] = text.split(':')
+    const decipher = crypto.createDecipheriv(
+      'aes-256-gcm',
+      getKey(),
+      Buffer.from(ivValue, 'base64url'),
+    )
 
-  decipher.setAuthTag(Buffer.from(authTagValue, 'base64url'))
+    decipher.setAuthTag(Buffer.from(authTagValue, 'base64url'))
 
-  return Buffer.concat([
-    decipher.update(Buffer.from(encryptedValue, 'base64url')),
-    decipher.final(),
-  ]).toString('utf8')
+    return Buffer.concat([
+      decipher.update(Buffer.from(encryptedValue, 'base64url')),
+      decipher.final(),
+    ]).toString('utf8')
+  } catch (error) {
+    console.error('Decryption error: Failed to decrypt text with current key.')
+    return null
+  }
 }
 
 function encryptFields(data, fields) {
