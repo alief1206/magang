@@ -14,10 +14,19 @@ function getScopedFilters(filters, user) {
   }
 
   if (isStaff(user)) {
-    return {
+    const scoped = {
       ...filters,
-      kelurahanId: user.kelurahanId,
     }
+
+    if (user.kelurahanId) {
+      scoped.kelurahanId = user.kelurahanId
+    }
+
+    if (user.role === 'lurah') {
+      scoped.targetRole = filters.targetRole || 'lurah'
+    }
+
+    return scoped
   }
 
   return {

@@ -22,7 +22,20 @@ export default function TanyaLurah() {
   const [chatInfo, setChatInfo] = useState(null);
   const [loadingCode, setLoadingCode] = useState(false);
 
+  const [kelurahans, setKelurahans] = useState([]);
+  const [showDataDiriModal, setShowDataDiriModal] = useState(false);
+  const [dataDiri, setDataDiri] = useState({ nama: '', kelurahanId: '' });
+  const [pendingText, setPendingText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/kelurahans')
+      .then(res => res.json())
+      .then(data => setKelurahans(data.data || []))
+      .catch(err => console.error("Failed to fetch kelurahans", err));
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,14 +107,60 @@ export default function TanyaLurah() {
     setMessages((prev) => [...prev, userMsg, botMsg]);
   };
 
+  const handleDataDiriChange = (e) => {
+    const { name, value } = e.target;
+    setDataDiri(prev => ({ ...prev, [name]: value }));
+  };
+
+  const createConversation = async (e) => {
+    e.preventDefault();
+    if (!dataDiri.kelurahanId) {
+      alert('Silakan pilih kelurahan Anda.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kelurahanId: parseInt(dataDiri.kelurahanId, 10),
+          guestName: dataDiri.nama || 'Warga',
+          subject: pendingText.slice(0, 50),
+          message: pendingText
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Gagal membuat pesan');
+      }
+
+      const data = await res.json();
+      const newChatId = data.data.id;
+      setActiveChatId(newChatId);
+      localStorage.setItem('userActiveChatId', newChatId);
+      setShowDataDiriModal(false);
+      setInputText('');
+      setPendingText('');
+      fetchServerChat(newChatId);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Gagal mengirim pesan ke kelurahan.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
     const currentText = inputText;
-    setInputText("");
 
     if (activeChatId) {
+      setInputText("");
       try {
         const res = await fetch(`http://localhost:5000/api/chats/${activeChatId}/messages`, {
           method: 'POST',
@@ -110,7 +169,7 @@ export default function TanyaLurah() {
         });
         
         if (!res.ok && res.status === 404) {
-          // Chat sudah dihapus, reset dan lanjut ke blok pembuatan chat baru
+          // Chat sudah dihapus, reset dan lanjut ke pemindahan ke modal
           setActiveChatId(null);
           localStorage.removeItem('userActiveChatId');
           setChatInfo(null);
@@ -123,48 +182,9 @@ export default function TanyaLurah() {
       }
     }
 
-    try {
-      const res = await fetch('http://localhost:5000/api/chats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kelurahanId: 1,
-          guestName: 'Warga',
-          subject: currentText.slice(0, 50),
-          message: currentText
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const newChatId = data.data.id;
-        setActiveChatId(newChatId);
-        localStorage.setItem('userActiveChatId', newChatId);
-        fetchServerChat(newChatId);
-        return;
-      }
-    } catch (err) {
-      console.log("Menjalankan fallback ke bot lokal...", err);
-    }
-
-    const userMsg = { id: Date.now(), sender: 'user', text: currentText };
-    setMessages((prev) => [...prev, userMsg]);
-
-    setTimeout(() => {
-      let botReply = "Maaf, saya belum menemukan jawaban pasti untuk pertanyaan tersebut. Silakan pilih dari Pertanyaan Populer atau hubungi loket kelurahan.";
-      const textLower = currentText.toLowerCase();
-
-      if (textLower.includes("ktp")) {
-        botReply = "Untuk keperluan KTP (baru/hilang/rusak), silakan bawa KK Asli dan Surat Pengantar RT/RW ke loket 1 kelurahan.";
-      } else if (textLower.includes("jam") || textLower.includes("buka")) {
-        botReply = "Kelurahan buka dari Senin-Kamis (08.00-15.30 WIB) dan Jumat (08.00-11.00 WIB). Sabtu & Minggu kami tutup.";
-      } else if (textLower.includes("halo") || textLower.includes("pagi")) {
-        botReply = "Halo! Selamat datang di Tanya Lurah ASLI. Silakan ketik pertanyaan Anda seputar layanan administrasi.";
-      }
-
-      const botMsg = { id: Date.now() + 1, sender: 'bot', text: botReply };
-      setMessages((prev) => [...prev, botMsg]);
-    }, 600);
+    // Jika belum ada chat aktif, buka modal data diri (Nama & Kelurahan)
+    setPendingText(currentText);
+    setShowDataDiriModal(true);
   };
 
   return (
@@ -448,6 +468,80 @@ export default function TanyaLurah() {
           </button>
         </form>
       </footer>
+
+      {/* Modal Data Diri untuk Memulai Chat Kelurahan */}
+      {showDataDiriModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#112A46]/60 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl p-6 lg:p-8 animate-in fade-in zoom-in duration-300 max-h-[90dvh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-[#112A46]">Kirim Pertanyaan ke Lurah</h3>
+              <button 
+                onClick={() => setShowDataDiriModal(false)} 
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2"
+                type="button"
+              >
+                <Icon icon="mdi:close" className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-slate-500 mb-6">
+              Silakan lengkapi data Anda dan pilih Kelurahan tujuan agar pertanyaan Anda dapat langsung diterima oleh Admin/Lurah terkait.
+            </p>
+
+            <form onSubmit={createConversation} className="flex flex-col gap-4">
+              <div>
+                <label className="text-[14px] font-bold text-[#112A46] mb-1.5 block">
+                  Nama Anda <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  name="nama"
+                  value={dataDiri.nama}
+                  onChange={handleDataDiriChange}
+                  required
+                  placeholder="Contoh: Budi Santoso"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-all text-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="text-[14px] font-bold text-[#112A46] mb-1.5 block">
+                  Kelurahan Tujuan <span className="text-red-500">*</span>
+                </label>
+                <div className="relative group">
+                  <select 
+                    name="kelurahanId"
+                    value={dataDiri.kelurahanId}
+                    onChange={handleDataDiriChange}
+                    required
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-all text-slate-700 appearance-none pr-10"
+                  >
+                    <option value="" disabled>Pilih Kelurahan...</option>
+                    {kelurahans.map(kel => (
+                      <option key={kel.id} value={kel.id}>{kel.name}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                    <Icon icon="mdi:chevron-down" className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all mt-4 disabled:opacity-70 disabled:cursor-not-allowed shadow-md cursor-pointer"
+              >
+                {isLoading ? (
+                  <>Meneruskan... <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" /></>
+                ) : (
+                  <>Kirim ke Admin/Lurah <Icon icon="mdi:send" className="w-5 h-5" /></>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

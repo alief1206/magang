@@ -245,7 +245,7 @@ export default function TanyaLurah() {
               {selectedConversation?.citizenName || 'Memuat...'}
             </h1>
             <p className="text-slate-500 font-medium">
-              Subjek: {selectedConversation?.subject || '-'}
+              Subjek: {selectedConversation?.subject || '-'} • <span className="text-blue-600 font-semibold">{selectedConversation?.kelurahanName ? `Kelurahan ${selectedConversation.kelurahanName}` : ''}</span>
             </p>
           </div>
           <div className="ml-auto flex items-center gap-3">
@@ -416,6 +416,11 @@ export default function TanyaLurah() {
                       <h4 className="font-extrabold text-[#112A46] text-[16px] group-hover:text-blue-600 transition-colors truncate">
                         {msg.citizenName}
                       </h4>
+                      {msg.kelurahanName && (
+                        <span className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-bold shrink-0">
+                          {msg.kelurahanName}
+                        </span>
+                      )}
                       {msg.lastMessageAt && (
                         <span className="text-xs font-medium text-slate-400">
                           {new Date(msg.lastMessageAt).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}

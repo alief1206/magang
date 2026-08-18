@@ -154,9 +154,11 @@ export default function TanyaPelayanan() {
   
   const messagesEndRef = useRef(null);
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   // Fetch kelurahan data for the form
   useEffect(() => {
-    fetch('http://localhost:5000/api/kelurahans')
+    fetch(`${API_BASE_URL}/api/kelurahans`)
       .then(res => res.json())
       .then(data => setKelurahans(data.data || []))
       .catch(err => console.error("Failed to fetch kelurahans", err));
@@ -176,7 +178,7 @@ export default function TanyaPelayanan() {
     let interval;
     if (conversationId) {
       const fetchConversation = () => {
-        fetch(`http://localhost:5000/api/chats/${conversationId}`)
+        fetch(`${API_BASE_URL}/api/chats/${conversationId}`)
           .then(res => {
             if (!res.ok) {
               if (res.status === 404) {
@@ -381,23 +383,34 @@ export default function TanyaPelayanan() {
   // LIVE CHAT CREATION
   const createConversation = async (e) => {
     e.preventDefault();
+    const parsedKelurahanId = parseInt(dataDiri.kelurahanId, 10);
+    
+    if (!dataDiri.kelurahanId || isNaN(parsedKelurahanId)) {
+      alert('Silakan pilih Kelurahan terlebih dahulu.');
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
       const payload = {
-        subject: pendingSubject,
-        kelurahanId: parseInt(dataDiri.kelurahanId, 10),
-        guestName: dataDiri.nama,
+        subject: pendingSubject || selectedCategory || (pendingMessage ? pendingMessage.slice(0, 50) : 'Pertanyaan Pelayanan'),
+        kelurahanId: parsedKelurahanId,
+        kelurahan_id: parsedKelurahanId,
+        guestName: dataDiri.nama || 'Warga',
         message: pendingMessage,
       };
 
-      const response = await fetch('http://localhost:5000/api/chats', {
+      const response = await fetch(`${API_BASE_URL}/api/chats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error('Gagal memulai percakapan');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Gagal memulai percakapan');
+      }
       
       const data = await response.json();
       const newConversationId = data.data.id;
@@ -407,16 +420,16 @@ export default function TanyaPelayanan() {
         id: 'temp-' + Date.now(),
         message: pendingMessage,
         senderRole: 'warga',
-        guestName: dataDiri.nama,
+        guestName: dataDiri.nama || 'Warga',
         createdAt: new Date().toISOString()
       }]);
       
       setConversationId(newConversationId);
-      setGuestName(dataDiri.nama);
+      setGuestName(dataDiri.nama || 'Warga');
       
       // Save to localStorage
       localStorage.setItem('activeConversationId', newConversationId);
-      localStorage.setItem('guestName', dataDiri.nama);
+      localStorage.setItem('guestName', dataDiri.nama || 'Warga');
       
       setShowDataDiriModal(false);
       setInputText('');
@@ -430,7 +443,7 @@ export default function TanyaPelayanan() {
       
     } catch (error) {
       console.error(error);
-      alert('Gagal memulai percakapan');
+      alert(error.message || 'Gagal memulai percakapan');
     } finally {
       setIsLoading(false);
     }

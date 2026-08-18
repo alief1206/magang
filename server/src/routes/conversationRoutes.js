@@ -1,7 +1,7 @@
 const express = require('express')
 const conversationController = require('../controllers/conversationController')
-const adminMiddleware = require('../middlewares/adminMiddleware')
 const authMiddleware = require('../middlewares/authMiddleware')
+const staffMiddleware = require('../middlewares/staffMiddleware')
 const optionalAuthMiddleware = require('../middlewares/optionalAuthMiddleware')
 
 const router = express.Router()
@@ -13,7 +13,7 @@ router.post('/:id/messages', optionalAuthMiddleware, conversationController.addM
 
 // Rute yang khusus Admin / Lurah
 router.use(authMiddleware)
-router.use(adminMiddleware)
+router.use(staffMiddleware)
 
 router.get('/', conversationController.getConversations)
 router.put('/:id', conversationController.updateConversation)

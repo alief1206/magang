@@ -221,6 +221,11 @@ export default function AspirasiWarga() {
                          <span className="flex items-center gap-1"><Icon icon="mdi:cellphone" className="w-3.5 h-3.5" /> -</span>
                       )}
                       <span className="flex items-center gap-1"><Icon icon="mdi:account" className="w-4 h-4" /> {item.name || 'Anonim'}</span>
+                      {item.kelurahanName && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[11px] font-bold">
+                          <Icon icon="mdi:map-marker" className="w-3.5 h-3.5 text-blue-500" /> {item.kelurahanName}
+                        </span>
+                      )}
                       {item.source === 'whatsapp' && (
                         <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-md text-[10px] font-bold"><Icon icon="mdi:whatsapp" /> WA</span>
                       )}

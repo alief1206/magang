@@ -15,7 +15,7 @@ function getScopedFilters(filters, user) {
   if (isStaff(user)) {
     return {
       ...filters,
-      kelurahanId: user.kelurahanId,
+      ...(user.kelurahanId ? { kelurahanId: user.kelurahanId } : {}),
     }
   }
 
@@ -30,7 +30,7 @@ function ensureCanAccessAspiration(aspiration, user) {
     throw createApiError('Login terlebih dahulu.', 401)
   }
 
-  if (isStaff(user) && Number(aspiration.kelurahanId) === Number(user.kelurahanId)) {
+  if (isStaff(user) && (!user.kelurahanId || Number(aspiration.kelurahanId) === Number(user.kelurahanId))) {
     return
   }
 
@@ -77,7 +77,7 @@ async function createAspiration(payload, user) {
     throw createApiError('Kelurahan wajib dipilih.', 400)
   }
 
-  if (isStaff(user) && Number(kelurahanId) !== Number(user.kelurahanId)) {
+  if (isStaff(user) && user.kelurahanId && Number(kelurahanId) !== Number(user.kelurahanId)) {
     throw createApiError('Admin hanya boleh membuat aspirasi untuk kelurahannya sendiri.', 403)
   }
 

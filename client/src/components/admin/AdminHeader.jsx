@@ -213,8 +213,26 @@ export default function AdminHeader({ toggleSidebar }) {
                <Icon icon="mdi:account" className="w-6 h-6 text-blue-600"/>
             </div>
             <div className="hidden md:block text-right">
-              <h4 className="text-sm font-bold text-slate-800">Admin Kelurahan</h4>
-              <p className="text-xs text-slate-500">Kelurahan Kepatihan</p>
+              <h4 className="text-sm font-bold text-slate-800">
+                {(() => {
+                  try {
+                    const u = JSON.parse(localStorage.getItem('adminUser') || '{}');
+                    return u.name || (u.role === 'lurah' ? 'Lurah' : 'Admin Kelurahan');
+                  } catch(e) {
+                    return 'Admin Kelurahan';
+                  }
+                })()}
+              </h4>
+              <p className="text-xs text-slate-500 font-semibold">
+                {(() => {
+                  try {
+                    const u = JSON.parse(localStorage.getItem('adminUser') || '{}');
+                    return u.kelurahanName ? `Kelurahan ${u.kelurahanName}` : 'Wilayah Kecamatan';
+                  } catch(e) {
+                    return 'Kelurahan';
+                  }
+                })()}
+              </p>
             </div>
             <motion.div animate={{ rotate: isProfileOpen ? 180 : 0 }}>
               <Icon icon="mdi:chevron-down" className="w-5 h-5 text-slate-400" />
