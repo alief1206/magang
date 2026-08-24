@@ -42,13 +42,149 @@ export default function DashboardAdmin() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
   };
 
-  const recentMessages = [
-    { id: 1, name: "Budi Santoso", time: "10:24", message: "Bagaimana cara mengurus surat domisili?", status: "Menunggu Admin", statusColor: "text-red-600 bg-red-50", avatarColor: "bg-blue-100 text-blue-600" },
-    { id: 2, name: "Siti Aminah", time: "09:57", message: "Mohon informasi terkait persyaratan KTP elektronik.", status: "Perlu Lurah", statusColor: "text-amber-600 bg-amber-50", avatarColor: "bg-emerald-100 text-emerald-600" },
-    { id: 3, name: "Rudi Hermawan", time: "09:34", message: "Apakah ada program bantuan UMKM tahun ini?", status: "Selesai", statusColor: "text-emerald-600 bg-emerald-50", avatarColor: "bg-purple-100 text-purple-600" },
-    { id: 4, name: "Mega Putri", time: "09:15", message: "Lampu jalan di RT.02 mati, mohon ditindaklanjuti.", status: "Perlu Lurah", statusColor: "text-amber-600 bg-amber-50", avatarColor: "bg-pink-100 text-pink-600" },
-    { id: 5, name: "Ahmad Fauzi", time: "09:02", message: "Minta mediasi permasalahan dengan tetangga.", status: "Menunggu Admin", statusColor: "text-red-600 bg-red-50", avatarColor: "bg-orange-100 text-orange-600" },
-  ];
+  const [dashboardData, setDashboardData] = useState({
+    stats: {
+      total: 0,
+      waiting: 0,
+      forwarded: 0,
+      completed: 0,
+    },
+    recentTickets: [],
+    loading: true
+  });
+
+  const token = localStorage.getItem('adminToken');
+
+  React.useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!token) return;
+      try {
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        const [chatsRes, aspirationsRes, statsRes, infoRes] = await Promise.all([
+          fetch('http://localhost:5000/api/chats', { headers }),
+          fetch('http://localhost:5000/api/aspirations', { headers }),
+          fetch('http://localhost:5000/api/reports/statistics', { headers }),
+          fetch('http://localhost:5000/api/informations', { headers })
+        ]);
+
+        const chatsData = chatsRes.ok ? await chatsRes.json() : { data: [] };
+        const aspirationsData = aspirationsRes.ok ? await aspirationsRes.json() : { data: [] };
+        const statsData = statsRes.ok ? await statsRes.json() : { data: {} };
+        const infoData = infoRes.ok ? await infoRes.json() : { data: [] };
+
+        const chats = chatsData.data || [];
+        const aspirations = aspirationsData.data || [];
+        const reportStats = statsData.data || {};
+        const informations = infoData.data || [];
+
+        const agendas = informations
+          .filter(info => info.type === 'Agenda')
+          .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate))
+          .filter(a => new Date(a.eventDate) >= new Date().setHours(0,0,0,0));
+
+        let total = reportStats.total_tickets || 0;
+        let waiting = reportStats.waiting_tickets || 0;
+        let forwarded = reportStats.forwarded_to_lurah || 0;
+        let completed = reportStats.completed_tickets || 0;
+
+        const combined = [];
+
+        chats.forEach(c => {
+          let chatStatusLabel = '';
+          let chatStatusColor = '';
+          if (c.status === 'waiting_response') {
+            chatStatusLabel = 'Menunggu Respon';
+            chatStatusColor = 'text-red-600 bg-red-50';
+          } else if (c.status === 'answered') {
+            chatStatusLabel = 'Sudah Dijawab';
+            chatStatusColor = 'text-emerald-600 bg-emerald-50';
+          } else if (c.status === 'closed') {
+            chatStatusLabel = 'Ditutup';
+            chatStatusColor = 'text-slate-600 bg-slate-50';
+          } else {
+            chatStatusLabel = c.status || 'Menunggu Respon';
+            chatStatusColor = 'text-slate-600 bg-slate-50';
+          }
+
+          combined.push({
+            id: `chat-${c.id}`,
+            name: c.citizenName || 'Anonim',
+            time: new Date(c.createdAt || c.lastMessageAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            date: new Date(c.createdAt || c.lastMessageAt),
+            message: c.subject || 'Tanya Lurah - Pesan Baru',
+            status: chatStatusLabel,
+            type: 'Tanya Lurah',
+            statusColor: chatStatusColor,
+            avatarColor: 'bg-blue-100 text-blue-600'
+          });
+        });
+
+        aspirations.forEach(a => {
+          
+          let aspStatusLabel = '';
+          let aspStatusColor = '';
+          switch ((a.status || '').toLowerCase()) {
+            case 'baru':
+              aspStatusLabel = 'Baru';
+              aspStatusColor = 'bg-blue-100 text-blue-700';
+              break;
+            case 'diproses':
+              aspStatusLabel = 'Diproses';
+              aspStatusColor = 'bg-amber-100 text-amber-700';
+              break;
+            case 'ditanggapi':
+              aspStatusLabel = 'Ditanggapi';
+              aspStatusColor = 'bg-emerald-100 text-emerald-700';
+              break;
+            case 'selesai':
+              aspStatusLabel = 'Selesai';
+              aspStatusColor = 'bg-slate-100 text-slate-700';
+              break;
+            case 'ditolak':
+              aspStatusLabel = 'Ditolak';
+              aspStatusColor = 'bg-red-100 text-red-700';
+              break;
+            default:
+              aspStatusLabel = a.status || 'Baru';
+              aspStatusColor = 'bg-slate-100 text-slate-700';
+          }
+
+          combined.push({
+            id: `asp-${a.id}`,
+            name: a.name || 'Anonim',
+            time: new Date(a.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            date: new Date(a.createdAt),
+            message: a.shortTitle || 'Aspirasi Warga Baru',
+            status: aspStatusLabel,
+            type: 'Aspirasi Warga',
+            statusColor: aspStatusColor,
+            avatarColor: 'bg-emerald-100 text-emerald-600'
+          });
+        });
+
+        combined.sort((a, b) => b.date - a.date);
+
+        setDashboardData({
+          stats: { total, waiting, forwarded, completed },
+          recentTickets: combined.slice(0, 5),
+          agendas: agendas.slice(0, 3), // Ambil 3 agenda terdekat
+          loading: false
+        });
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setDashboardData(prev => ({ ...prev, loading: false }));
+      }
+    };
+
+    fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 5000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   return (
     <motion.div 
@@ -75,11 +211,13 @@ export default function DashboardAdmin() {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-500 mb-0.5">Total Tiket Masuk</p>
-              <h3 className="text-2xl font-extrabold text-[#112A46]">120</h3>
+              <h3 className="text-2xl font-extrabold text-[#112A46]">
+                {dashboardData.loading ? '...' : dashboardData.stats.total}
+              </h3>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-500 bg-emerald-50 w-fit px-2.5 py-1 rounded-lg">
-            <Icon icon="mdi:trending-up" className="w-4 h-4" /> +18 hari ini
+            <Icon icon="mdi:trending-up" className="w-4 h-4" /> Terupdate
           </div>
         </div>
 
@@ -91,7 +229,9 @@ export default function DashboardAdmin() {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-500 mb-0.5">Menunggu Admin</p>
-              <h3 className="text-2xl font-extrabold text-[#112A46]">18</h3>
+              <h3 className="text-2xl font-extrabold text-[#112A46]">
+                {dashboardData.loading ? '...' : dashboardData.stats.waiting}
+              </h3>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-red-500 bg-red-50 w-fit px-2.5 py-1 rounded-lg">
@@ -107,7 +247,9 @@ export default function DashboardAdmin() {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-500 mb-0.5">Diteruskan ke Lurah</p>
-              <h3 className="text-2xl font-extrabold text-[#112A46]">7</h3>
+              <h3 className="text-2xl font-extrabold text-[#112A46]">
+                {dashboardData.loading ? '...' : dashboardData.stats.forwarded}
+              </h3>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 bg-amber-50 w-fit px-2.5 py-1 rounded-lg">
@@ -123,11 +265,13 @@ export default function DashboardAdmin() {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-500 mb-0.5">Tiket Selesai</p>
-              <h3 className="text-2xl font-extrabold text-[#112A46]">95</h3>
+              <h3 className="text-2xl font-extrabold text-[#112A46]">
+                {dashboardData.loading ? '...' : dashboardData.stats.completed}
+              </h3>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-100 w-fit px-2.5 py-1 rounded-lg">
-            <Icon icon="mdi:calendar-check" className="w-4 h-4" /> Sepanjang bulan ini
+            <Icon icon="mdi:calendar-check" className="w-4 h-4" /> Seluruh tiket
           </div>
         </div>
       </motion.div>
@@ -147,25 +291,38 @@ export default function DashboardAdmin() {
             </div>
 
             <div className="space-y-4">
-              {recentMessages.map((msg) => (
-                <div key={msg.id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all cursor-pointer gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 ${msg.avatarColor}`}>
-                      {msg.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-bold text-[#112A46] text-[15px] group-hover:text-blue-600 transition-colors">{msg.name}</h4>
-                        <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{msg.time}</span>
-                      </div>
-                      <p className="text-sm text-slate-600 line-clamp-1">{msg.message}</p>
-                    </div>
-                  </div>
-                  <div className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 sm:self-center self-start ${msg.statusColor}`}>
-                    {msg.status}
-                  </div>
+              {dashboardData.loading ? (
+                <div className="flex justify-center py-10">
+                  <Icon icon="mdi:loading" className="w-8 h-8 text-blue-500 animate-spin" />
                 </div>
-              ))}
+              ) : dashboardData.recentTickets.length === 0 ? (
+                <div className="text-center py-10 text-slate-500">
+                  Tidak ada tiket baru.
+                </div>
+              ) : (
+                dashboardData.recentTickets.map((msg) => (
+                  <div key={msg.id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all cursor-pointer gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 ${msg.avatarColor}`}>
+                        {msg.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-bold text-[#112A46] text-[15px] group-hover:text-blue-600 transition-colors">{msg.name}</h4>
+                          <span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{msg.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{msg.type}</span>
+                        </div>
+                        <p className="text-sm text-slate-600 line-clamp-1">{msg.message}</p>
+                      </div>
+                    </div>
+                    <div className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 sm:self-center self-start ${msg.statusColor}`}>
+                      {msg.status}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
             
             <Link to="/admin/tanya-lurah" className="block text-center w-full mt-6 sm:hidden py-3 bg-blue-50 text-blue-600 font-bold rounded-xl text-sm">
@@ -214,31 +371,36 @@ export default function DashboardAdmin() {
             </div>
             
             <div className="space-y-5">
-              <div className="flex gap-4 group cursor-pointer">
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex flex-col items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                  <span className="text-xs font-bold text-blue-600 group-hover:text-blue-100 uppercase">Ags</span>
-                  <span className="text-lg font-extrabold text-[#112A46] group-hover:text-white leading-none">15</span>
+              {dashboardData.loading ? (
+                <div className="flex justify-center py-5">
+                  <Icon icon="mdi:loading" className="w-8 h-8 text-blue-500 animate-spin" />
                 </div>
-                <div>
-                  <h4 className="font-bold text-[#112A46] text-[15px] mb-1 group-hover:text-blue-600 transition-colors">Rapat Musrenbangdes</h4>
-                  <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
-                    <Icon icon="mdi:clock-outline" /> 09:00 - Selesai
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 group cursor-pointer">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex flex-col items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                  <span className="text-xs font-bold text-emerald-600 group-hover:text-emerald-100 uppercase">Ags</span>
-                  <span className="text-lg font-extrabold text-[#112A46] group-hover:text-white leading-none">17</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-[#112A46] text-[15px] mb-1 group-hover:text-emerald-600 transition-colors">Upacara & Lomba Warga</h4>
-                  <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
-                    <Icon icon="mdi:clock-outline" /> 07:00 - Selesai
-                  </p>
-                </div>
-              </div>
+              ) : dashboardData.agendas && dashboardData.agendas.length > 0 ? (
+                dashboardData.agendas.map(agenda => {
+                  const eventDate = new Date(agenda.eventDate);
+                  const month = eventDate.toLocaleString('id-ID', { month: 'short' });
+                  const date = eventDate.getDate();
+                  const isSoon = (eventDate.getTime() - new Date().getTime()) < 3 * 24 * 60 * 60 * 1000; // less than 3 days
+                  const colorTheme = isSoon ? 'blue' : 'emerald';
+                  
+                  return (
+                    <div key={agenda.id} className="flex gap-4 group cursor-pointer">
+                      <div className={`w-14 h-14 rounded-2xl bg-${colorTheme}-50 border border-${colorTheme}-100 flex flex-col items-center justify-center shrink-0 group-hover:bg-${colorTheme}-600 group-hover:text-white transition-colors`}>
+                        <span className={`text-xs font-bold text-${colorTheme}-600 group-hover:text-${colorTheme}-100 uppercase`}>{month}</span>
+                        <span className="text-lg font-extrabold text-[#112A46] group-hover:text-white leading-none">{date}</span>
+                      </div>
+                      <div>
+                        <h4 className={`font-bold text-[#112A46] text-[15px] mb-1 group-hover:text-${colorTheme}-600 transition-colors`}>{agenda.title}</h4>
+                        <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                          <Icon icon="mdi:clock-outline" /> {eventDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} - Selesai
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-5 text-slate-500 text-sm">Belum ada agenda terdekat.</div>
+              )}
             </div>
 
             <Link to="/admin/agenda" className="block text-center w-full mt-6 py-3 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-800 font-bold rounded-xl text-sm transition-colors">

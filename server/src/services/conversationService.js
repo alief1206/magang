@@ -67,6 +67,8 @@ async function getConversationById(id, user) {
 
   ensureCanAccessConversation(conversation, user)
 
+  await conversationModel.markMessagesAsRead(id, user ? user.role : 'warga')
+
   const messages = await conversationModel.findMessages(id)
 
   return {

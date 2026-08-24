@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 export default function InformasiKelurahan() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('semua');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -16,20 +18,97 @@ export default function InformasiKelurahan() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    alert(`Berhasil membuat informasi: ${formData.title}`);
-    setIsModalOpen(false);
-    setFormData({ title: '', type: 'Pengumuman', date: '', description: '' });
+  const [stats, setStats] = useState({
+    total_conversations: 0,
+    resolved_by_ai: 0,
+    forwarded_to_admin: 0,
+    forwarded_to_lurah: 0,
+    pending_lurah: 0,
+    pending_admin: 0
+  });
+
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('http://localhost:5000/api/reports/statistics', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await res.json();
+      if (result.success) {
+        setStats(result.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const listData = [
-    { id: 1, title: "Kerja Bakti Lingkungan", date: "Minggu, 12 Mei 2026", type: "Agenda", color: "text-emerald-600 bg-emerald-50 border-emerald-100", img: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&q=80&w=150&h=100" },
-    { id: 2, title: "Musyawarah RT Bulan Mei", date: "Sabtu, 11 Mei 2026", type: "Agenda", color: "text-emerald-600 bg-emerald-50 border-emerald-100", img: "https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=150&h=100" },
-    { id: 3, title: "Pembayaran PBB Diperpanjang", date: "Rabu, 8 Mei 2026", type: "Pengumuman", color: "text-blue-600 bg-blue-50 border-blue-100", img: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=150&h=100" },
-    { id: 4, title: "Program Bantuan UMKM", date: "Senin, 6 Mei 2026", type: "Program", color: "text-orange-600 bg-orange-50 border-orange-100", img: "https://unsplash.com/id/foto/pria-berbaju-biru-di-samping-pria-dengan-kemeja-putih-7RWBSYA9Rro" },
-    { id: 5, title: "Layanan Perizinan Online", date: "Jumat, 3 Mei 2026", type: "Pengumuman", color: "text-blue-600 bg-blue-50 border-blue-100", img: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=150&h=100" },
-  ];
+  const fetchInformations = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('http://localhost:5000/api/informations', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await res.json();
+      if (result.success) {
+        setInformations(result.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchInformations();
+    fetchStats();
+    
+    // Polling setiap 5 detik
+    const intervalId = setInterval(() => {
+      fetchInformations();
+      fetchStats();
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('http://localhost:5000/api/informations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          type: formData.type,
+          eventDate: formData.date || null,
+          description: formData.description
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(`Berhasil membuat informasi: ${formData.title}`);
+        setIsModalOpen(false);
+        setFormData({ title: '', type: 'Pengumuman', date: '', description: '' });
+        fetchInformations();
+      } else {
+        alert(result.message || 'Gagal menyimpan informasi');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Terjadi kesalahan koneksi');
+    }
+  };
+
+  const [informations, setInformations] = useState([]);
+
+  const getTypeColor = (type) => {
+    if (type === 'Agenda') return 'text-emerald-600 bg-emerald-50 border-emerald-100';
+    if (type === 'Program') return 'text-orange-600 bg-orange-50 border-orange-100';
+    return 'text-blue-600 bg-blue-50 border-blue-100';
+  };
 
   return (
     <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full">
@@ -51,23 +130,23 @@ export default function InformasiKelurahan() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
           <p className="text-sm font-bold text-slate-500 mb-2">Total Percakapan</p>
-          <h3 className="text-3xl font-extrabold text-[#112A46] mb-2">560</h3>
-          <p className="text-xs font-semibold text-emerald-500">12% <span className="text-slate-400 font-medium">dari minggu lalu</span></p>
+          <h3 className="text-3xl font-extrabold text-[#112A46] mb-2">{stats.total_conversations}</h3>
+          <p className="text-xs font-semibold text-emerald-500">Real-time update</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
           <p className="text-sm font-bold text-slate-500 mb-2">Diselesaikan AI</p>
-          <h3 className="text-3xl font-extrabold text-[#112A46] mb-2">420</h3>
-          <p className="text-xs font-semibold text-slate-500">75% dari total</p>
+          <h3 className="text-3xl font-extrabold text-[#112A46] mb-2">{stats.resolved_by_ai}</h3>
+          <p className="text-xs font-semibold text-slate-500">Placeholder metrik</p>
         </div>
         <div className="bg-orange-50/50 p-5 rounded-2xl border border-orange-100 shadow-sm">
           <p className="text-sm font-bold text-slate-500 mb-2">Diteruskan ke Admin</p>
-          <h3 className="text-3xl font-extrabold text-[#112A46] mb-2">96</h3>
-          <p className="text-xs font-semibold text-slate-500">17% dari total</p>
+          <h3 className="text-3xl font-extrabold text-[#112A46] mb-2">{stats.forwarded_to_admin}</h3>
+          <p className="text-xs font-semibold text-slate-500">Dari total percakapan</p>
         </div>
         <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
           <p className="text-sm font-bold text-slate-500 mb-2">Diteruskan ke Lurah</p>
-          <h3 className="text-3xl font-extrabold text-[#112A46] mb-2">44</h3>
-          <p className="text-xs font-semibold text-slate-500">8% dari total</p>
+          <h3 className="text-3xl font-extrabold text-[#112A46] mb-2">{stats.forwarded_to_lurah}</h3>
+          <p className="text-xs font-semibold text-slate-500">Dari total percakapan</p>
         </div>
       </div>
 
@@ -78,8 +157,14 @@ export default function InformasiKelurahan() {
               {tab}
             </button>
           ))}
-          <button className="px-6 py-2.5 rounded-xl font-bold text-sm bg-white border border-slate-200 text-slate-600 flex items-center gap-2">
-            Perlu Lurah <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-md">7</span>
+          <button 
+            onClick={() => navigate('/admin/tanya-lurah?tab=perlu_lurah')}
+            className="px-6 py-2.5 rounded-xl font-bold text-sm bg-white border border-slate-200 text-slate-600 flex items-center gap-2 hover:bg-slate-50 transition-colors"
+          >
+            Perlu Lurah 
+            {stats.pending_lurah > 0 && (
+              <span className="text-xs bg-slate-100 px-2 py-0.5 rounded-md text-red-600 font-extrabold">{stats.pending_lurah}</span>
+            )}
           </button>
         </div>
         <button onClick={() => setIsModalOpen(true)} className="bg-[#112A46] hover:bg-blue-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md shrink-0">
@@ -88,8 +173,8 @@ export default function InformasiKelurahan() {
       </div>
 
       <div className="space-y-3">
-        {listData
-          .filter(item => activeTab === 'semua' || item.type.toLowerCase() === activeTab)
+        {informations
+          .filter(item => activeTab === 'semua' || (item.type && item.type.toLowerCase() === activeTab))
           .map((item, index) => (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -99,13 +184,17 @@ export default function InformasiKelurahan() {
             className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-200 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center gap-4">
-              <img src={item.img} alt={item.title} className="w-20 h-14 object-cover rounded-xl shrink-0" />
+              <img src={item.imageUrl || "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=150&h=100"} alt={item.title} className="w-20 h-14 object-cover rounded-xl shrink-0" />
               <div>
                 <h4 className="font-bold text-[#112A46] text-sm md:text-[15px] mb-1">{item.title}</h4>
-                <p className="text-xs font-medium text-slate-500">{item.date}</p>
+                <p className="text-xs font-medium text-slate-500">
+                  {item.eventDate 
+                    ? new Date(item.eventDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) 
+                    : new Date(item.createdAt).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
               </div>
             </div>
-            <div className={`px-4 py-1.5 rounded-full border text-xs font-bold sm:mr-4 ${item.color}`}>
+            <div className={`px-4 py-1.5 rounded-full border text-xs font-bold sm:mr-4 ${getTypeColor(item.type)}`}>
               {item.type}
             </div>
           </motion.div>

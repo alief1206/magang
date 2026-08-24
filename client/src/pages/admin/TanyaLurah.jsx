@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import ChatBubble from '../../components/chat/ChatBubble';
 import ChatInput from '../../components/chat/ChatInput';
 import QuickReply from '../../components/chat/QuickReply';
 
 export default function TanyaLurah() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   // Common states
   const [error, setError] = useState('');
   
   // List View states
   const [conversations, setConversations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Detail View states
@@ -182,6 +185,7 @@ export default function TanyaLurah() {
   const tabs = [
     { id: 'all', label: 'Semua' },
     { id: 'waiting_response', label: 'Menunggu Respon' },
+    { id: 'perlu_lurah', label: 'Perlu Lurah' },
     { id: 'answered', label: 'Sudah Dijawab' },
     { id: 'closed', label: 'Ditutup' },
   ];
@@ -205,7 +209,15 @@ export default function TanyaLurah() {
   };
 
   const filteredConversations = conversations.filter(conv => {
-    const matchesTab = activeTab === 'all' || conv.status === activeTab;
+    let matchesTab = false;
+    if (activeTab === 'all') {
+      matchesTab = true;
+    } else if (activeTab === 'perlu_lurah') {
+      matchesTab = conv.targetRole === 'lurah' && conv.status === 'waiting_response';
+    } else {
+      matchesTab = conv.status === activeTab;
+    }
+
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = (conv.citizenName?.toLowerCase() || '').includes(searchLower) || 
                           (conv.subject?.toLowerCase() || '').includes(searchLower);
@@ -214,6 +226,7 @@ export default function TanyaLurah() {
 
   const getTabCount = (tabId) => {
     if (tabId === 'all') return conversations.length;
+    if (tabId === 'perlu_lurah') return conversations.filter(c => c.targetRole === 'lurah' && c.status === 'waiting_response').length;
     return conversations.filter(c => c.status === tabId).length;
   };
 
@@ -298,6 +311,7 @@ export default function TanyaLurah() {
                     source={msg.source}
                     createdAt={msg.createdAt}
                     isOwn={msg.senderRole === 'admin'}
+                    isRead={msg.isRead}
                   />
                 ))}
                 <div ref={messagesEndRef} />
@@ -374,7 +388,10 @@ export default function TanyaLurah() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSearchParams({ tab: tab.id });
+                }}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm whitespace-nowrap transition-all ${
                   activeTab === tab.id 
                     ? 'bg-[#112A46] text-white shadow-md' 

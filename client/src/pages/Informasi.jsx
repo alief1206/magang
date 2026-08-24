@@ -1,16 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import rapat from '../assets/images/rapat.png';
 import lurah2 from '../assets/images/Lurah-2.png'; 
-import { mockInformasi, formatInformasiByCategory } from '../data/mockInformasi';
-import { useState, useEffect } from 'react';
+import { formatInformasiByCategory } from '../data/mockInformasi';
 
 export default function Informasi() {
   const navigate = useNavigate();
 
   const [kelurahans, setKelurahans] = useState([]);
   const [selectedKelurahan, setSelectedKelurahan] = useState('');
+  const [informations, setInformations] = useState([]);
 
   useEffect(() => {
     fetch('http://localhost:5000/api/kelurahans')
@@ -24,9 +24,38 @@ export default function Informasi() {
       .catch(err => console.error("Failed to fetch kelurahans", err));
   }, []);
 
+  useEffect(() => {
+    const fetchInfo = () => {
+      fetch('http://localhost:5000/api/informations')
+        .then(res => res.json())
+        .then(data => {
+          if (data.data) {
+            const mapped = data.data.map(item => ({
+              id: item.id,
+              kelurahanId: item.kelurahanId,
+              kategori: item.type === 'Agenda' ? 'Agenda Kegiatan' : (item.type === 'Program' ? 'Program Kegiatan' : 'Pengumuman'),
+              name: item.title,
+              headerIcon: item.type === 'Agenda' ? 'mdi:calendar-month' : (item.type === 'Program' ? 'mdi:hospital-box-outline' : 'mdi:bullhorn'),
+              desc: item.description,
+              date: item.eventDate ? new Date(item.eventDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '-',
+              time: item.eventDate ? new Date(item.eventDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB - Selesai' : '-',
+              loc: 'Balai Kelurahan',
+              target: 'Terbuka untuk umum'
+            }));
+            setInformations(mapped);
+          }
+        })
+        .catch(err => console.error("Gagal mengambil informasi:", err));
+    };
+
+    fetchInfo();
+    const interval = setInterval(fetchInfo, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const filteredData = selectedKelurahan 
-    ? mockInformasi.filter(item => item.kelurahanId.toString() === selectedKelurahan)
-    : mockInformasi;
+    ? informations.filter(item => item.kelurahanId.toString() === selectedKelurahan)
+    : informations;
 
   const categories = formatInformasiByCategory(filteredData);
 

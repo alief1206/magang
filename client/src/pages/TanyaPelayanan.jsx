@@ -741,8 +741,7 @@ export default function TanyaPelayanan() {
                   <span className="text-xs font-semibold ml-1 flex items-center gap-1">
                     {isLurah ? (
                       <span className="text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full flex items-center gap-1 font-bold shadow-xs">
-                        <Icon icon="mdi:whatsapp" className="w-4 h-4 text-emerald-600 animate-pulse" />
-                        Jawaban Resmi Pak Lurah (via WhatsApp)
+                        Jawaban Resmi Pak Lurah
                       </span>
                     ) : (
                       <span className="text-blue-700 font-bold flex items-center gap-1">
@@ -762,8 +761,14 @@ export default function TanyaPelayanan() {
                 >
                   {msg.message}
                 </div>
-                <span className={`text-[10px] text-slate-400 mt-1 ${isUser ? 'text-right mr-1' : 'ml-1'}`}>
+                <span className={`text-[10px] text-slate-400 mt-1 flex items-center gap-1 ${isUser ? 'justify-end mr-1' : 'ml-1'}`}>
                   {new Date(msg.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  {isUser && (
+                    <Icon 
+                      icon={msg.isRead ? "mdi:check-all" : "mdi:check"} 
+                      className={`w-3.5 h-3.5 ${msg.isRead ? 'text-blue-500' : 'text-slate-400'}`} 
+                    />
+                  )}
                 </span>
               </div>
             </div>

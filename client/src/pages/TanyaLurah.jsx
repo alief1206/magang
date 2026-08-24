@@ -350,8 +350,7 @@ export default function TanyaLurah() {
                       {isAdmin && <span className="text-blue-700 font-bold flex items-center gap-1"><Icon icon="mdi:shield-check" className="w-4 h-4 text-blue-600" /> Admin Kelurahan</span>}
                       {isLurahWA && (
                         <span className="text-emerald-800 bg-emerald-100 border border-emerald-300 px-3 py-1 rounded-full flex items-center gap-1.5 font-bold shadow-xs">
-                          <Icon icon="mdi:whatsapp" className="w-4 h-4 text-emerald-600 animate-pulse" />
-                          Jawaban Resmi Pak Lurah (via WhatsApp)
+                          Jawaban Resmi Pak Lurah
                         </span>
                       )}
                     </div>

@@ -6,7 +6,7 @@ const conversationEncryptedFields = ['subject', 'citizenName', 'forwardedToLurah
 const messageEncryptedFields = ['message', 'senderName']
 
 async function findAll(filters = {}) {
-  const where = []
+  const where = ['c.is_deleted = FALSE']
   const params = []
 
   if (filters.status) {
@@ -79,7 +79,7 @@ async function findById(id) {
       FROM chat_conversations c
       LEFT JOIN kelurahans k ON k.id = c.kelurahan_id
       LEFT JOIN users u ON u.id = c.citizen_id
-      WHERE c.id = ?
+      WHERE c.id = ? AND c.is_deleted = FALSE
     `,
     [id],
   )
@@ -130,7 +130,7 @@ async function update(id, conversation) {
 }
 
 async function remove(id) {
-  const [result] = await db.query('DELETE FROM chat_conversations WHERE id = ?', [id])
+  const [result] = await db.query("UPDATE chat_conversations SET is_deleted = TRUE, status = 'closed' WHERE id = ?", [id])
   return result.affectedRows > 0
 }
 
@@ -252,6 +252,21 @@ async function markForwardedToLurah(id, phone) {
   return findById(id)
 }
 
+async function markMessagesAsRead(conversationId, userRole) {
+  let condition = ""
+  
+  if (userRole === 'admin' || userRole === 'lurah') {
+    condition = "sender_role = 'warga'"
+  } else {
+    condition = "sender_role IN ('admin', 'lurah')"
+  }
+  
+  await db.query(
+    `UPDATE chat_messages SET is_read = 1 WHERE conversation_id = ? AND ${condition} AND is_read = 0`,
+    [conversationId]
+  )
+}
+
 module.exports = {
   findAll,
   findById,
@@ -264,4 +279,5 @@ module.exports = {
   updateMessage,
   removeMessage,
   markForwardedToLurah,
+  markMessagesAsRead,
 }

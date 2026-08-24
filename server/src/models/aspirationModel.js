@@ -20,7 +20,7 @@ function decryptResponse(response) {
 }
 
 async function findAll(filters = {}) {
-  const where = []
+  const where = ['a.is_deleted = FALSE']
   const params = []
 
   if (filters.status) {
@@ -112,7 +112,7 @@ async function findById(id) {
         a.updated_at AS updatedAt
       FROM citizen_aspirations a
       LEFT JOIN kelurahans k ON k.id = a.kelurahan_id
-      WHERE a.id = ?
+      WHERE a.id = ? AND a.is_deleted = FALSE
     `,
     [id],
   )
@@ -208,7 +208,7 @@ async function update(id, aspiration) {
 }
 
 async function remove(id) {
-  const [result] = await db.query('DELETE FROM citizen_aspirations WHERE id = ?', [id])
+  const [result] = await db.query("UPDATE citizen_aspirations SET is_deleted = TRUE, status = 'selesai' WHERE id = ?", [id])
   return result.affectedRows > 0
 }
 
