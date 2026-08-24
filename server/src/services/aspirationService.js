@@ -81,12 +81,28 @@ async function createAspiration(payload, user) {
     throw createApiError('Admin hanya boleh membuat aspirasi untuk kelurahannya sendiri.', 403)
   }
 
+  let predictedCategory = payload.category;
+  let predictedPriority = 'Sedang';
+
+  try {
+    const axios = require('axios');
+    const aiResponse = await axios.post('http://localhost:5001/predict', { text: payload.description });
+    if (aiResponse.data) {
+      predictedCategory = aiResponse.data.category || predictedCategory;
+      predictedPriority = aiResponse.data.priority || predictedPriority;
+    }
+  } catch (error) {
+    console.error('AI Prediction failed:', error.message);
+  }
+
   return aspirationModel.create({
     ...payload,
     name: payload.name.trim(),
     address: payload.address.trim(),
     shortTitle: payload.shortTitle.trim(),
     description: payload.description.trim(),
+    category: predictedCategory,
+    priority: predictedPriority,
     userId: payload.userId || (user && user.role === 'warga' ? user.id : undefined),
     kelurahanId,
     ...imageMetadata,

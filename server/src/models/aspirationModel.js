@@ -60,6 +60,7 @@ async function findAll(filters = {}) {
         a.name,
         a.address,
         a.category,
+        a.priority,
         a.short_title AS shortTitle,
         a.description,
         a.image_path AS imagePath,
@@ -94,6 +95,7 @@ async function findById(id) {
         a.name,
         a.address,
         a.category,
+        a.priority,
         a.short_title AS shortTitle,
         a.description,
         a.image_path AS imagePath,
@@ -130,6 +132,7 @@ async function create(aspiration) {
         name,
         address,
         category,
+        priority,
         short_title,
         description,
         image_path,
@@ -145,7 +148,7 @@ async function create(aspiration) {
         status,
         assigned_to_role
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       aspiration.userId || null,
@@ -153,6 +156,7 @@ async function create(aspiration) {
       encryptedAspiration.name,
       encryptedAspiration.address,
       aspiration.category,
+      aspiration.priority || 'Sedang',
       encryptedAspiration.shortTitle,
       encryptedAspiration.description,
       aspiration.imagePath || null,
@@ -182,6 +186,7 @@ async function update(id, aspiration) {
       name: encryption.encryptText(aspiration.name),
       address: encryption.encryptText(aspiration.address),
       category: aspiration.category,
+      priority: aspiration.priority,
       short_title: encryption.encryptText(aspiration.shortTitle),
       description: encryption.encryptText(aspiration.description),
       image_path: aspiration.imagePath,

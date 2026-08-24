@@ -76,7 +76,7 @@ export default function AspirasiWarga() {
     
     try {
       setUpdatingStatus(true);
-      const res = await fetch(`http://localhost:5000/api/aspirations/${selectedItem.id}/status`, {
+      const res = await fetch(`http://localhost:5000/api/aspirations/${selectedItem.id}`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify({ status: newStatus })
@@ -112,6 +112,15 @@ export default function AspirasiWarga() {
       case 'ditanggapi': return 'bg-emerald-100 text-emerald-700';
       case 'selesai': return 'bg-slate-100 text-slate-700';
       case 'ditolak': return 'bg-red-100 text-red-700';
+      default: return 'bg-slate-100 text-slate-700';
+    }
+  };
+
+  const getPriorityBadge = (priority) => {
+    switch ((priority || '').toLowerCase()) {
+      case 'tinggi': return 'bg-red-100 text-red-700';
+      case 'sedang': return 'bg-amber-100 text-amber-700';
+      case 'rendah': return 'bg-emerald-100 text-emerald-700';
       default: return 'bg-slate-100 text-slate-700';
     }
   };
@@ -232,8 +241,15 @@ export default function AspirasiWarga() {
                     </div>
                   </div>
                 </div>
-                <div className={`px-6 py-2 rounded-full text-xs font-bold sm:mr-2 self-start sm:self-center capitalize ${getStatusBadge(item.status)}`}>
-                  {item.status || 'baru'}
+                <div className="flex flex-col gap-2 items-end">
+                  <div className={`px-6 py-2 rounded-full text-xs font-bold capitalize ${getStatusBadge(item.status)}`}>
+                    {item.status || 'baru'}
+                  </div>
+                  {item.priority && (
+                    <div className={`px-4 py-1 rounded-full text-[10px] font-bold capitalize border ${getPriorityBadge(item.priority).replace('bg-', 'border-').replace('text-', 'text-')}`}>
+                      Prioritas: {item.priority}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))
@@ -277,6 +293,11 @@ export default function AspirasiWarga() {
                         <div className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
                           {selectedItem.category}
                         </div>
+                        {selectedItem.priority && (
+                          <div className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${getPriorityBadge(selectedItem.priority)}`}>
+                            {selectedItem.priority}
+                          </div>
+                        )}
                       </div>
                       <h2 className="text-2xl font-bold text-[#112A46] mt-3">{selectedItem.shortTitle}</h2>
                       <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">

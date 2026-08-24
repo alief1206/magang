@@ -8,7 +8,6 @@ export default function KotakAspirasi() {
   const [formData, setFormData] = useState({
     nama: '',
     alamat: '',
-    kategori: '',
     judul: '',
     pesan: '',
     foto: null,
@@ -49,7 +48,7 @@ export default function KotakAspirasi() {
       if (!/^[\p{L}\p{N} ,./-]+$/u.test(value)) return 'Alamat mengandung karakter yang tidak diperbolehkan.';
     }
 
-    if (name === 'kategori' && !value) return 'Kategori wajib diisi.';
+
     if (name === 'judul' && !trimmedValue) return 'Judul singkat wajib diisi.';
     if (name === 'pesan' && !trimmedValue) return 'Detail aspirasi wajib diisi.';
 
@@ -108,7 +107,7 @@ export default function KotakAspirasi() {
     
     // Validate all before showing modal
     const nextErrors = Object.fromEntries(
-      ['kategori', 'judul', 'pesan'].map((field) => [
+      ['judul', 'pesan'].map((field) => [
         field,
         validateField(field, formData[field]),
       ]),
@@ -136,7 +135,6 @@ export default function KotakAspirasi() {
       const payload = {
         name: formData.isAnonim ? 'Anonim' : dataDiri.nama,
         address: dataDiri.alamat,
-        category: formData.kategori,
         shortTitle: formData.judul,
         description: formData.pesan,
         kelurahanId: parseInt(dataDiri.kelurahanId, 10),
@@ -201,36 +199,8 @@ export default function KotakAspirasi() {
 
 
 
-              <div className="flex flex-col gap-3">
-                <label className="text-[15px] font-bold text-[#112A46]">Kategori Usulan <span className="text-red-500">*</span></label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
-                    <Icon icon="mdi:tag-outline" className="w-6 h-6" />
-                  </div>
-                  <select
-                    name="kategori"
-                    value={formData.kategori}
-                    onChange={handleChange}
-                    required
-                    className={`w-full pl-14 pr-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:bg-white focus:ring-4 transition-all text-slate-700 font-semibold text-[15px] appearance-none cursor-pointer ${errors?.kategori ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/10'}`}
-                  >
-                    <option value="" disabled>Pilih kategori...</option>
-                    <option value="Kualitas Pelayanan Administrasi">Kualitas Pelayanan Administrasi</option>
-                    <option value="Pemberdayaan & UMKM">Pemberdayaan & UMKM Warga</option>
-                    <option value="Kegiatan Sosial & Kesehatan">Sosial & Kesehatan (Posyandu, dll)</option>
-                    <option value="Inovasi & Kegiatan Pemuda">Inovasi & Kegiatan Pemuda</option>
-                    <option value="Ketertiban & Keamanan">Ketertiban & Keamanan</option>
-                    <option value="Infrastruktur">Infrastruktur</option>
-                    <option value="Lainnya">Lainnya</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none text-slate-400">
-                    <Icon icon="mdi:chevron-down" className="w-6 h-6" />
-                  </div>
-                </div>
-                {errors?.kategori && <p className="text-sm text-red-600">{errors.kategori}</p>}
-              </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 md:col-span-2">
                 <label className="text-[15px] font-bold text-[#112A46]">Judul Singkat <span className="text-red-500">*</span></label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">

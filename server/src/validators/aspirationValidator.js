@@ -32,10 +32,13 @@ function validateIdentityAndCategory(payload, { required }) {
     errors.push('Alamat mengandung karakter yang tidak diperbolehkan.')
   }
 
-  if (required && !payload.category) {
-    errors.push('Kategori wajib diisi.')
-  } else if (payload.category !== undefined && !categories.includes(payload.category)) {
+  if (payload.category !== undefined && !categories.includes(payload.category)) {
     errors.push('Kategori usulan tidak valid.')
+  }
+
+  const priorities = ['Tinggi', 'Sedang', 'Rendah']
+  if (payload.priority !== undefined && !priorities.includes(payload.priority)) {
+    errors.push('Prioritas usulan tidak valid.')
   }
 
   return errors
