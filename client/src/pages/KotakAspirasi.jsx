@@ -150,7 +150,8 @@ export default function KotakAspirasi() {
       });
 
       if (!response.ok) {
-        throw new Error('Gagal mengirim aspirasi');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Gagal mengirim aspirasi');
       }
 
       setShowDataDiriModal(false);

@@ -81,8 +81,8 @@ async function createAspiration(payload, user) {
     throw createApiError('Admin hanya boleh membuat aspirasi untuk kelurahannya sendiri.', 403)
   }
 
-  let predictedCategory = payload.category;
-  let predictedPriority = 'Sedang';
+  let predictedCategory = payload.category || 'Lainnya';
+  let predictedPriority = payload.priority || 'Sedang';
 
   try {
     const axios = require('axios');

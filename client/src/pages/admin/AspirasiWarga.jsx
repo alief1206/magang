@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const getAspirationImageUrl = (item) => {
+  if (!item) return null;
+  const path = item.imageUrl || item.compressedImagePath || item.imagePath;
+  if (!path) return null;
+  return path.startsWith('http') ? path : `http://localhost:5000${path}`;
+};
+
 export default function AspirasiWarga() {
   const [activeTab, setActiveTab] = useState('semua');
   const [aspirasiData, setAspirasiData] = useState([]);
@@ -214,8 +221,8 @@ export default function AspirasiWarga() {
                 className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white rounded-2xl border border-slate-200 hover:border-emerald-300 hover:shadow-lg transition-all cursor-pointer gap-4"
               >
                 <div className="flex items-center gap-4">
-                  {item.imageUrl ? (
-                    <img src={`http://localhost:5000${item.imageUrl}`} alt={item.shortTitle} className="w-24 h-16 object-cover rounded-xl shrink-0 bg-slate-100" />
+                  {getAspirationImageUrl(item) ? (
+                    <img src={getAspirationImageUrl(item)} alt={item.shortTitle} className="w-24 h-16 object-cover rounded-xl shrink-0 bg-slate-100" />
                   ) : (
                     <div className="w-24 h-16 bg-slate-100 rounded-xl flex items-center justify-center shrink-0">
                       <Icon icon="mdi:image-off-outline" className="w-6 h-6 text-slate-300" />
@@ -347,11 +354,11 @@ export default function AspirasiWarga() {
                            {selectedItem.address || '-'}
                          </p>
                       </div>
-                      {selectedItem.imageUrl && (
+                      {getAspirationImageUrl(selectedItem) && (
                         <div className="mb-4">
                            <p className="text-xs text-slate-400 font-medium mb-2">Lampiran Foto</p>
-                           <a href={`http://localhost:5000${selectedItem.imageUrl}`} target="_blank" rel="noopener noreferrer">
-                             <img src={`http://localhost:5000${selectedItem.imageUrl}`} alt="Lampiran" className="max-w-full rounded-xl max-h-64 object-contain bg-slate-100 border border-slate-200" />
+                           <a href={getAspirationImageUrl(selectedItem)} target="_blank" rel="noopener noreferrer">
+                             <img src={getAspirationImageUrl(selectedItem)} alt="Lampiran" className="max-w-full rounded-xl max-h-64 object-contain bg-slate-100 border border-slate-200" />
                            </a>
                         </div>
                       )}
