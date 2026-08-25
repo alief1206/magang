@@ -99,6 +99,22 @@ export default function AspirasiWarga() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!selectedItem || !window.confirm('Apakah Anda yakin ingin menghapus aspirasi ini?')) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/aspirations/${selectedItem.id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      if (!res.ok) throw new Error('Gagal menghapus aspirasi');
+      setSelectedItem(null);
+      fetchAspirasi();
+    } catch (err) {
+      console.error(err);
+      alert('Gagal menghapus aspirasi.');
+    }
+  };
+
   const tabs = ['semua', 'baru', 'diproses', 'ditanggapi', 'selesai', 'ditolak'];
 
   const getStatusColorName = (status) => {
@@ -425,22 +441,30 @@ export default function AspirasiWarga() {
                     </form>
 
                     <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                      <span className="text-sm font-medium text-slate-500">Ubah Status Laporan:</span>
-                      <div className="flex items-center gap-2">
-                        {updatingStatus && <Icon icon="mdi:loading" className="w-4 h-4 text-emerald-500 animate-spin" />}
-                        <select
-                          value={selectedItem.status || 'baru'}
-                          onChange={handleChangeStatus}
-                          disabled={updatingStatus}
-                          className={`px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer focus:ring-2 focus:ring-offset-2 outline-none ${getStatusBadge(selectedItem.status)}`}
-                        >
-                          <option value="baru" className="bg-white text-slate-700">Baru</option>
-                          <option value="diproses" className="bg-white text-slate-700">Diproses</option>
-                          <option value="ditanggapi" className="bg-white text-slate-700">Ditanggapi</option>
-                          <option value="selesai" className="bg-white text-slate-700">Selesai</option>
-                          <option value="ditolak" className="bg-white text-slate-700">Ditolak</option>
-                        </select>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-medium text-slate-500">Ubah Status Laporan:</span>
+                        <div className="flex items-center gap-2">
+                          {updatingStatus && <Icon icon="mdi:loading" className="w-4 h-4 text-emerald-500 animate-spin" />}
+                          <select
+                            value={selectedItem.status || 'baru'}
+                            onChange={handleChangeStatus}
+                            disabled={updatingStatus}
+                            className={`px-4 py-2 rounded-xl text-sm font-bold border-none cursor-pointer focus:ring-2 focus:ring-offset-2 outline-none ${getStatusBadge(selectedItem.status)}`}
+                          >
+                            <option value="baru" className="bg-white text-slate-700">Baru</option>
+                            <option value="diproses" className="bg-white text-slate-700">Diproses</option>
+                            <option value="ditanggapi" className="bg-white text-slate-700">Ditanggapi</option>
+                            <option value="selesai" className="bg-white text-slate-700">Selesai</option>
+                            <option value="ditolak" className="bg-white text-slate-700">Ditolak</option>
+                          </select>
+                        </div>
                       </div>
+                      <button
+                        onClick={handleDelete}
+                        className="px-4 py-2 flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 font-bold rounded-xl text-sm transition-colors"
+                      >
+                        <Icon icon="mdi:trash-can-outline" className="w-4 h-4" /> Hapus
+                      </button>
                     </div>
                   </div>
                 </>

@@ -136,7 +136,12 @@ async function updateAspiration(id, payload, user) {
 }
 
 async function deleteAspiration(id, user) {
-  await getAspirationById(id, user)
+  const aspiration = await getAspirationById(id, user)
+  
+  if (aspiration.imagePath) {
+    await imageCompressionService.deleteImage(aspiration.imagePath)
+  }
+  
   await aspirationModel.remove(id)
 }
 

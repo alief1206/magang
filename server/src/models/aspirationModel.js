@@ -215,7 +215,20 @@ async function update(id, aspiration) {
 }
 
 async function remove(id) {
-  const [result] = await db.query("UPDATE citizen_aspirations SET is_deleted = TRUE, status = 'selesai' WHERE id = ?", [id])
+  const [result] = await db.query(
+    `UPDATE citizen_aspirations 
+     SET is_deleted = TRUE, 
+         status = 'selesai',
+         image_path = NULL,
+         image_original_name = NULL,
+         image_mime_type = NULL,
+         image_size_bytes = NULL,
+         compressed_image_path = NULL,
+         compressed_image_size_bytes = NULL,
+         compression_status = 'not_needed'
+     WHERE id = ?`, 
+    [id]
+  )
   return result.affectedRows > 0
 }
 

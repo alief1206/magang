@@ -31,6 +31,17 @@ export default function AdminHeader({ toggleSidebar }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // FUNGSI UNTUK REQUEST PUSH NOTIFICATION PERMISSION
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // POLLING UNTUK PUSH NOTIFICATION CHAT BARU & ASPIRASI BARU
+  const lastMsgAtRef = useRef(null);
+  const totalTicketsRef = useRef(null);
+  
   useEffect(() => {
     const adminUserStr = localStorage.getItem('adminUser');
     let isLurah = false;
@@ -43,35 +54,114 @@ export default function AdminHeader({ toggleSidebar }) {
       } catch (e) {}
     }
 
-    if (!isLurah) return;
-
     const token = localStorage.getItem('adminToken') || localStorage.getItem('authToken') || localStorage.getItem('token');
     if (!token) return;
 
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/aspirations/notifications/lurah`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((response) => {
-        if (response.status === 401) {
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('adminUser');
-          navigate('/admin/login');
-          return null;
+    // Fungsi fetch data awal tanpa notifikasi
+    const initData = async () => {
+      try {
+        // Fetch conversations
+        const convRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/conversations`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (convRes.ok) {
+          const result = await convRes.json();
+          if (result.data && result.data.length > 0) {
+            const maxDate = new Date(Math.max(...result.data.map(c => new Date(c.lastMessageAt || c.createdAt))));
+            lastMsgAtRef.current = maxDate;
+          }
         }
-        return response.ok ? response.json() : null;
-      })
-      .then((result) => {
-        if (!result?.data) return;
-        setNotifications(result.data.map((notification) => ({
-          id: notification.id,
-          title: 'Aspirasi Diteruskan',
-          desc: notification.message,
-          time: new Date(notification.createdAt).toLocaleString('id-ID'),
-          unread: !notification.isRead,
-        })));
-      })
-      .catch(() => {});
-  }, []);
+        
+        // Fetch stats
+        const statRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/reports/statistics`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (statRes.ok) {
+          const result = await statRes.json();
+          if (result.success && result.data) {
+            totalTicketsRef.current = result.data.total_tickets;
+          }
+        }
+      } catch (err) {}
+    };
+
+    const pollData = async () => {
+      try {
+        // Cek Chat Baru
+        const convRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/conversations`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (convRes.ok) {
+          const result = await convRes.json();
+          if (result.data && result.data.length > 0) {
+            const maxDate = new Date(Math.max(...result.data.map(c => new Date(c.lastMessageAt || c.createdAt))));
+            if (lastMsgAtRef.current && maxDate > lastMsgAtRef.current) {
+              lastMsgAtRef.current = maxDate;
+              // Show Notification
+              if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("Pesan Baru", {
+                  body: "Anda menerima pesan chat baru dari warga.",
+                  icon: "/vite.svg"
+                });
+              }
+            } else if (!lastMsgAtRef.current) {
+              lastMsgAtRef.current = maxDate;
+            }
+          }
+        }
+
+        // Cek Aspirasi Baru
+        const statRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/reports/statistics`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (statRes.ok) {
+          const result = await statRes.json();
+          if (result.success && result.data) {
+            const currentTotal = result.data.total_tickets;
+            if (totalTicketsRef.current !== null && currentTotal > totalTicketsRef.current) {
+              totalTicketsRef.current = currentTotal;
+              // Show Notification
+              if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("Aspirasi Baru Masuk", {
+                  body: "Terdapat aspirasi/laporan baru dari warga.",
+                  icon: "/vite.svg"
+                });
+              }
+            } else if (totalTicketsRef.current === null) {
+              totalTicketsRef.current = currentTotal;
+            }
+          }
+        }
+        
+        // Fetch lurah notifications for dropdown menu
+        if (isLurah) {
+          const notifRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/aspirations/notifications/lurah`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (notifRes.ok) {
+            const result = await notifRes.json();
+            if (result.data) {
+              setNotifications(result.data.map((notification) => ({
+                id: notification.id,
+                title: 'Aspirasi Diteruskan',
+                desc: notification.message,
+                time: new Date(notification.createdAt).toLocaleString('id-ID'),
+                unread: !notification.isRead,
+              })));
+            }
+          } else if (notifRes.status === 401) {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            navigate('/admin/login');
+          }
+        }
+      } catch (err) {}
+    };
+
+    initData();
+    const interval = setInterval(pollData, 5000);
+    return () => clearInterval(interval);
+  }, [navigate]);
 
   const handleLogout = () => {
     navigate('/admin/login');

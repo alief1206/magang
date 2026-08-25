@@ -79,9 +79,22 @@ function prepareImageMetadata(image) {
   }
 }
 
+async function deleteImage(imagePath) {
+  if (!imagePath) return;
+  try {
+    const fullPath = path.join(__dirname, '..', '..', imagePath);
+    await fs.unlink(fullPath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.error('Failed to delete image file:', error);
+    }
+  }
+}
+
 module.exports = {
   allowedMimeTypes,
   maxImageSizeBytes,
   prepareImageMetadata,
   storeImage,
+  deleteImage,
 }

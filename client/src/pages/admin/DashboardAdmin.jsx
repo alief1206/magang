@@ -50,6 +50,9 @@ export default function DashboardAdmin() {
       completed: 0,
     },
     recentTickets: [],
+    agendas: [],
+    aspirations: [],
+    categoryStats: [],
     loading: true
   });
 
@@ -168,11 +171,23 @@ export default function DashboardAdmin() {
 
         combined.sort((a, b) => b.date - a.date);
 
+        // Calculate category stats
+        const categoryCounts = {};
+        aspirations.forEach(a => {
+           const cat = a.category || 'Lainnya';
+           categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+        });
+        const categoryStats = Object.entries(categoryCounts)
+           .map(([name, count]) => ({ name, count }))
+           .sort((a, b) => b.count - a.count);
+
         setDashboardData({
           stats: { total, waiting, forwarded, completed },
           recentTickets: combined.slice(0, 5),
           agendas: agendas.slice(0, 3), // Ambil 3 agenda terdekat
-          loading: false
+          loading: false,
+          aspirations: aspirations,
+          categoryStats: categoryStats
         });
 
       } catch (error) {
@@ -568,22 +583,16 @@ export default function DashboardAdmin() {
                 <h4 className="text-[13px] font-extrabold text-[#0F2942] uppercase tracking-wider mb-6">Kategori Aspirasi Terbanyak</h4>
                 
                 <div className="space-y-5 mb-8">
-                  <div className="flex items-center justify-between pl-2">
-                    <span className="font-medium text-[#29425A] text-[15px]">Infrastruktur & Lingkungan</span>
-                    <span className="font-extrabold text-[#0F2942] text-[15px]">45 Laporan</span>
-                  </div>
-                  <div className="flex items-center justify-between pl-2">
-                    <span className="font-medium text-[#29425A] text-[15px]">Pelayanan Publik</span>
-                    <span className="font-extrabold text-[#0F2942] text-[15px]">30 Laporan</span>
-                  </div>
-                  <div className="flex items-center justify-between pl-2">
-                    <span className="font-medium text-[#29425A] text-[15px]">Sosial & Bantuan</span>
-                    <span className="font-extrabold text-[#0F2942] text-[15px]">15 Laporan</span>
-                  </div>
-                  <div className="flex items-center justify-between pl-2">
-                    <span className="font-medium text-[#29425A] text-[15px]">Keamanan & Ketertiban</span>
-                    <span className="font-extrabold text-[#0F2942] text-[15px]">10 Laporan</span>
-                  </div>
+                  {dashboardData.categoryStats?.length > 0 ? (
+                    dashboardData.categoryStats.slice(0, 5).map((cat, idx) => (
+                      <div key={idx} className="flex items-center justify-between pl-2">
+                        <span className="font-medium text-[#29425A] text-[15px]">{cat.name}</span>
+                        <span className="font-extrabold text-[#0F2942] text-[15px]">{cat.count} Laporan</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-slate-500">Belum ada data aspirasi</div>
+                  )}
                 </div>
                 
                 <div className="p-4 bg-white border border-blue-100/80 rounded-2xl flex items-start gap-3">
@@ -606,26 +615,19 @@ export default function DashboardAdmin() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-slate-100">
-                      <td className="py-3 text-[13px] font-semibold text-[#0F2942]">Budi Santoso</td>
-                      <td className="py-3 text-[13px] text-[#29425A]">Infrastruktur</td>
-                      <td className="py-3 text-[13px] text-[#29425A]">Jalan berlubang di gang mawar RT 03</td>
-                    </tr>
-                    <tr className="border-b border-slate-100">
-                      <td className="py-3 text-[13px] font-semibold text-[#0F2942]">Siti Aminah</td>
-                      <td className="py-3 text-[13px] text-[#29425A]">Pelayanan Publik</td>
-                      <td className="py-3 text-[13px] text-[#29425A]">Mohon informasi jadwal layanan e-KTP keliling</td>
-                    </tr>
-                    <tr className="border-b border-slate-100">
-                      <td className="py-3 text-[13px] font-semibold text-[#0F2942]">Ahmad Fauzi</td>
-                      <td className="py-3 text-[13px] text-[#29425A]">Keamanan</td>
-                      <td className="py-3 text-[13px] text-[#29425A]">Lampu penerangan jalan utama banyak yang mati</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3 text-[13px] font-semibold text-[#0F2942]">Mega Putri</td>
-                      <td className="py-3 text-[13px] text-[#29425A]">Sosial</td>
-                      <td className="py-3 text-[13px] text-[#29425A]">Usulan perbaikan data penerima sembako lansia</td>
-                    </tr>
+                    {dashboardData.aspirations?.length > 0 ? (
+                      dashboardData.aspirations.map((a, idx) => (
+                        <tr key={idx} className="border-b border-slate-100">
+                          <td className="py-3 pr-2 text-[13px] font-semibold text-[#0F2942] align-top">{a.name || 'Anonim'}</td>
+                          <td className="py-3 pr-2 text-[13px] text-[#29425A] align-top">{a.category || '-'}</td>
+                          <td className="py-3 text-[13px] text-[#29425A] align-top">{a.shortTitle || a.description || '-'}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className="py-4 text-center text-slate-500 text-sm">Tidak ada data.</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
