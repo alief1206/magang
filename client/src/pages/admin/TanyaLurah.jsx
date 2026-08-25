@@ -30,6 +30,8 @@ export default function TanyaLurah() {
   const isFirstFetch = useRef(true);
 
   const token = localStorage.getItem('adminToken');
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+  const currentRole = adminUser.role;
 
   useEffect(() => {
     let interval;
@@ -310,7 +312,7 @@ export default function TanyaLurah() {
                     senderName={msg.senderName}
                     source={msg.source}
                     createdAt={msg.createdAt}
-                    isOwn={msg.senderRole === 'admin'}
+                    isOwn={msg.senderRole === currentRole}
                     isRead={msg.isRead}
                   />
                 ))}
@@ -322,7 +324,12 @@ export default function TanyaLurah() {
           <div className="p-4 bg-white border-t border-slate-100 space-y-4">
             <QuickReply 
               onSelect={handleSendMessage} 
-              replies={[
+              replies={currentRole === 'lurah' ? [
+                'Baik, akan segera saya tindak lanjuti.',
+                'Terima kasih atas masukannya.',
+                'Silakan temui saya di kantor kelurahan.',
+                'Apakah ada hal lain yang bisa saya bantu?'
+              ] : [
                 'Terima kasih, akan kami proses.', 
                 'Mohon tunggu konfirmasi dari Lurah.', 
                 'Silakan datang ke kantor kelurahan membawa dokumen terkait.',

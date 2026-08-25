@@ -3,14 +3,15 @@ import { Icon } from '@iconify/react';
 
 const ChatBubble = ({ message, senderRole, senderName, source, createdAt, isOwn, isRead }) => {
   const getBubbleStyle = () => {
-    if (isOwn) {
-      return 'bg-blue-600 text-white rounded-br-none';
+    const borderRadius = isOwn ? 'rounded-br-none' : 'rounded-bl-none';
+    if (senderRole === 'admin') {
+      return `bg-blue-600 text-white ${borderRadius}`;
     }
     if (senderRole === 'lurah') {
-      return 'bg-emerald-50 border border-emerald-200 text-slate-800 rounded-bl-none';
+      return `bg-emerald-50 border border-emerald-200 text-slate-800 ${borderRadius}`;
     }
     // Default warga
-    return 'bg-white border border-slate-200 text-slate-800 rounded-bl-none';
+    return `bg-white border border-slate-200 text-slate-800 ${borderRadius}`;
   };
 
   return (
