@@ -1,6 +1,7 @@
 const fs = require('fs/promises')
 const path = require('path')
 const { randomUUID } = require('crypto')
+const sharp = require('sharp')
 
 const allowedMimeTypes = {
   'image/jpeg': '.jpg',
@@ -30,16 +31,33 @@ async function storeImage(image) {
     throw createUploadError('Ukuran foto maksimal 20 MB.')
   }
 
+  let processedBuffer = fileBuffer;
+  try {
+    if (image.mimeType === 'image/jpeg') {
+      processedBuffer = await sharp(fileBuffer)
+        .jpeg({ quality: 80, mozjpeg: true })
+        .toBuffer();
+    } else if (image.mimeType === 'image/png') {
+      processedBuffer = await sharp(fileBuffer)
+        .png({ quality: 80, compressionLevel: 8 })
+        .toBuffer();
+    }
+  } catch (error) {
+    console.error('Gagal melakukan kompresi gambar:', error);
+  }
+
   const fileName = `${randomUUID()}${allowedMimeTypes[image.mimeType]}`
   const uploadDirectory = path.join(__dirname, '..', '..', 'uploads', 'aspirations')
   await fs.mkdir(uploadDirectory, { recursive: true })
-  await fs.writeFile(path.join(uploadDirectory, fileName), fileBuffer)
+  await fs.writeFile(path.join(uploadDirectory, fileName), processedBuffer)
 
   return prepareImageMetadata({
     path: `/uploads/aspirations/${fileName}`,
     originalName: String(image.originalName || fileName).slice(0, 255),
     mimeType: image.mimeType,
-    sizeBytes: fileBuffer.length,
+    sizeBytes: processedBuffer.length,
+    compressedPath: `/uploads/aspirations/${fileName}`,
+    compressedSizeBytes: processedBuffer.length,
   })
 }
 
