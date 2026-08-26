@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS informations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  kelurahan_id INT NOT NULL,
+  author_id INT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  type ENUM('Pengumuman', 'Agenda', 'Program') NOT NULL DEFAULT 'Pengumuman',
+  event_date DATE DEFAULT NULL,
+  description TEXT NOT NULL,
+  image_url VARCHAR(500) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (kelurahan_id) REFERENCES kelurahans(id) ON DELETE CASCADE,
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);

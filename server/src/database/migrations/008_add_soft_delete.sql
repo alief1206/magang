@@ -1,0 +1,5 @@
+ALTER TABLE chat_conversations
+ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE citizen_aspirations
+ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
