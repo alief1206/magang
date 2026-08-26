@@ -8,10 +8,13 @@ const routes = require('./routes')
 const errorMiddleware = require('./middlewares/errorMiddleware')
 const notFoundMiddleware = require('./middlewares/notFoundMiddleware')
 
+const { apiLimiter } = require('./middlewares/rateLimiterMiddleware')
+
 const app = express()
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
 app.use(compression())
+app.use(apiLimiter)
 app.use(
   cors({
     origin: env.clientUrl,

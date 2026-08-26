@@ -7,3 +7,10 @@ server/uploads/*
 !server/uploads/.gitkeep
 !server/uploads/aspirations/
 !server/uploads/aspirations/.gitkeep
+
+# Exclude unit tests and test scripts from Git push
+unit-tests/
+tests/
+*.test.js
+*.spec.js
+coverage/
