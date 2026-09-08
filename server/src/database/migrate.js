@@ -12,10 +12,6 @@ function escapeDatabaseName(databaseName) {
 }
 
 async function runMigrations() {
-  if (!env.database.name) {
-    throw new Error('Isi DB_NAME di file .env terlebih dahulu.')
-  }
-
   const connection = await mysql.createConnection({
     host: env.database.host,
     port: env.database.port,
@@ -29,15 +25,29 @@ async function runMigrations() {
     `CREATE DATABASE IF NOT EXISTS ${databaseName} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
   )
   await connection.query(`USE ${databaseName}`)
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      name VARCHAR(255) PRIMARY KEY,
+      run_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
 
   const migrationsPath = path.join(__dirname, 'migrations')
   const migrationFiles = (await fs.readdir(migrationsPath))
     .filter((file) => file.endsWith('.sql'))
     .sort()
+  const [appliedRows] = await connection.query('SELECT name FROM schema_migrations')
+  const appliedMigrations = new Set(appliedRows.map((row) => row.name))
 
   for (const file of migrationFiles) {
+    if (appliedMigrations.has(file)) {
+      console.log(`Skipped: ${file}`)
+      continue
+    }
+
     const sql = await fs.readFile(path.join(migrationsPath, file), 'utf8')
     await connection.query(sql)
+    await connection.query('INSERT INTO schema_migrations (name) VALUES (?)', [file])
     console.log(`Migrated: ${file}`)
   }
 

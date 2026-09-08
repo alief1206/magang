@@ -25,7 +25,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginUser />} />
+        {/* Login warga disembunyikan - warga tidak perlu login, cukup isi data diri di popup */}
+        {/* <Route path="/login" element={<LoginUser />} /> */}
         
         <Route element={<MainLayout />}>
           <Route path="/" element={<Beranda />} />

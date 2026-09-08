@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { motion } from 'framer-motion';
 import { 
@@ -8,22 +9,36 @@ import {
 
 export default function StatistikLaporan() {
   const [filter, setFilter] = useState('7 hari terakhir');
+  const [stats, setStats] = useState({
+    total_tickets: 0,
+    waiting_tickets: 0,
+    forwarded_to_lurah: 0,
+    completed_tickets: 0
+  });
 
-  const lineData = [
-    { name: '1 Mei', masuk: 60, lurah: 35, selesai: 10 },
-    { name: '2 Mei', masuk: 80, lurah: 30, selesai: 20 },
-    { name: '3 Mei', masuk: 85, lurah: 40, selesai: 15 },
-    { name: '4 Mei', masuk: 70, lurah: 45, selesai: 25 },
-    { name: '5 Mei', masuk: 75, lurah: 35, selesai: 20 },
-    { name: '6 Mei', masuk: 90, lurah: 45, selesai: 30 },
-    { name: '7 Mei', masuk: 70, lurah: 40, selesai: 25 },
-  ];
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('http://localhost:5000/api/reports/statistics', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await res.json();
+      if (result.success) {
+        setStats(result.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-  const pieData = [
-    { name: 'Keluhan Lingkungan', value: 40, color: '#112A46' },
-    { name: 'Usulan & Saran', value: 30, color: '#3B82F6' },
-    { name: 'Permohonan Mediasi', value: 30, color: '#F59E0B' },
-  ];
+  React.useEffect(() => {
+    fetchStats();
+    const intervalId = setInterval(fetchStats, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const lineData = stats.weekly_stats || [];
+  const pieData = stats.aspiration_categories || [];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -71,26 +86,28 @@ export default function StatistikLaporan() {
             Analisis data interaksi warga dan performa layanan kelurahan.
           </p>
         </div>
-        <div className="relative shrink-0">
-          <select 
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="appearance-none bg-white border border-slate-200 text-slate-700 font-bold py-3 pl-5 pr-12 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
-          >
-            <option>7 hari terakhir</option>
-            <option>30 hari terakhir</option>
-            <option>Bulan ini</option>
-          </select>
-          <Icon icon="mdi:chevron-down" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+        <div className="w-full sm:w-auto flex items-center gap-3 shrink-0">
+          <div className="relative w-full">
+            <select 
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="w-full appearance-none bg-white border border-slate-200 text-slate-700 font-bold py-3 pl-5 pr-12 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
+            >
+              <option>7 hari terakhir</option>
+              <option>30 hari terakhir</option>
+              <option>Bulan ini</option>
+            </select>
+            <Icon icon="mdi:chevron-down" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+          </div>
         </div>
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         {[
-          { title: 'Percakapan Masuk', count: '120', trend: '+18 hari ini', icon: 'mdi:message-text-outline', color: 'blue' },
-          { title: 'Menunggu Admin', count: '18', trend: 'Perlu Respon', icon: 'mdi:clock-alert-outline', color: 'red' },
-          { title: 'Diteruskan ke Lurah', count: '7', trend: 'Menunggu tindak lanjut', icon: 'mdi:account-tie', color: 'amber' },
-          { title: 'Percakapan Selesai', count: '95', trend: '+15 hari ini', icon: 'mdi:check-circle-outline', color: 'emerald' }
+          { title: 'Percakapan Masuk', count: stats.total_tickets, trend: 'Real-time', icon: 'mdi:message-text-outline', color: 'blue' },
+          { title: 'Menunggu Admin', count: stats.waiting_tickets, trend: 'Real-time', icon: 'mdi:clock-alert-outline', color: 'red' },
+          { title: 'Diteruskan ke Lurah', count: stats.forwarded_to_lurah, trend: 'Real-time', icon: 'mdi:account-tie', color: 'amber' },
+          { title: 'Percakapan Selesai', count: stats.completed_tickets, trend: 'Real-time', icon: 'mdi:check-circle-outline', color: 'emerald' }
         ].map((stat, idx) => (
           <div key={idx} className="bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex items-center gap-5">
             <div className={`w-14 h-14 rounded-2xl bg-${stat.color}-50 text-${stat.color}-500 flex items-center justify-center shrink-0`}>
@@ -160,7 +177,7 @@ export default function StatistikLaporan() {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <span className="block text-3xl font-black text-[#112A46]">120</span>
+                  <span className="block text-3xl font-black text-[#112A46]">{stats.total_tickets}</span>
                   <span className="text-xs font-bold text-slate-400">Total Tiket</span>
                 </div>
               </div>
@@ -179,9 +196,9 @@ export default function StatistikLaporan() {
             </div>
           </div>
           
-          <button className="w-full mt-8 py-3.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 group">
+          <Link to="/admin/aspirasi" className="w-full mt-8 py-3.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 group">
             Lihat semua aspirasi <Icon icon="mdi:arrow-right" className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          </Link>
         </motion.div>
       </div>
       

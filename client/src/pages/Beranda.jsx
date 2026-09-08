@@ -6,8 +6,42 @@ import kantorLurah from '../assets/images/kantor-lurah.png';
 import rapat from '../assets/images/rapat.png';
 import karakter from '../assets/images/karakter.png'; 
 import banyuwangiSehat from '../assets/images/banyuwangi-sehat.png'; 
+import { useState, useEffect } from 'react';
+import { formatInformasiByCategory } from '../data/mockInformasi';
 
 export default function Beranda() {
+  const [informations, setInformations] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchInfo = () => {
+      fetch('http://localhost:5000/api/informations')
+        .then(res => res.json())
+        .then(data => {
+          if (data.data) {
+            const mapped = data.data.map(item => ({
+              id: item.id,
+              kelurahanId: item.kelurahanId,
+              kategori: item.type === 'Agenda' ? 'Agenda Kegiatan' : (item.type === 'Program' ? 'Program Kegiatan' : 'Pengumuman'),
+              name: item.title,
+              headerIcon: item.type === 'Agenda' ? 'mdi:calendar-month' : (item.type === 'Program' ? 'mdi:hospital-box-outline' : 'mdi:bullhorn'),
+              desc: item.description,
+              date: item.eventDate ? new Date(item.eventDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '-',
+              time: item.eventDate ? new Date(item.eventDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB - Selesai' : '-',
+              loc: 'Balai Kelurahan',
+              target: 'Terbuka untuk umum'
+            }));
+            setInformations(mapped);
+            setCategories(formatInformasiByCategory(mapped));
+          }
+        })
+        .catch(err => console.error("Gagal mengambil informasi:", err));
+    };
+
+    fetchInfo();
+    const interval = setInterval(fetchInfo, 5000);
+    return () => clearInterval(interval);
+  }, []);
   return (
     <div className="min-h-screen bg-white font-sans flex flex-col overflow-x-hidden">
       <section className="relative w-full pt-12 pb-24 lg:pb-32">
@@ -165,7 +199,44 @@ export default function Beranda() {
                 </div>
              </div>
            </div>
-        </section>
+         </section>
+         
+         <section className="max-w-[1440px] mx-auto px-6 lg:px-10 mb-28">
+          <div className="text-center mb-12">
+            <h3 className="text-2xl lg:text-3xl font-extrabold text-[#112A46] mb-4">Informasi Kelurahan Terkini</h3>
+            <p className="text-slate-500 text-[16px] max-w-2xl mx-auto">
+              Berita, agenda, dan pengumuman terbaru langsung dari kelurahan.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {categories.map((cat, idx) => (
+              <div key={idx} className="bg-white rounded-3xl p-6 lg:p-8 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)] transition-all duration-300">
+                <h4 className="font-extrabold text-[#112A46] text-xl mb-4 border-b border-slate-100 pb-3">{cat.title}</h4>
+                <div className="space-y-4">
+                  {cat.items.slice(0, 3).map((item, i) => (
+                    <div key={i} className="flex flex-col gap-1 border-b border-slate-50 pb-3 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-2 text-[#112A46] font-bold text-[15px]">
+                        <Icon icon={item.headerIcon} className="w-5 h-5" /> {item.name}
+                      </div>
+                      <p className="text-sm text-slate-500 line-clamp-2">{item.desc}</p>
+                      <div className="flex items-center gap-2 text-[12px] text-slate-400 mt-1">
+                        <Icon icon="mdi:calendar" /> {item.date}
+                      </div>
+                    </div>
+                  ))}
+                  {cat.items.length === 0 && (
+                     <p className="text-sm text-slate-400 italic">Belum ada informasi.</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-10">
+             <Link to="/informasi" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition-colors">
+               Lihat Semua Informasi <Icon icon="mdi:arrow-right" className="w-5 h-5" />
+             </Link>
+          </div>
+         </section>
         
       </main>
 

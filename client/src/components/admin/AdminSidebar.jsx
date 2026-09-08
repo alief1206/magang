@@ -9,7 +9,9 @@ export default function AdminSidebar({ isSidebarOpen }) {
   return (
     <aside 
       className={`fixed lg:relative z-50 inset-y-0 left-0 bg-slate-900 h-full flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
-        isSidebarOpen ? 'w-[280px] translate-x-0' : 'w-0 -translate-x-full lg:translate-x-0'
+        isSidebarOpen 
+          ? 'translate-x-0 w-[280px]' 
+          : '-translate-x-full lg:translate-x-0 w-[280px] lg:w-0'
       }`}
     >
       <div className="w-[280px] h-full flex flex-col text-white overflow-y-auto">

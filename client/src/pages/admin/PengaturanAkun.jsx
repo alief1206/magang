@@ -1,9 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function PengaturanAkun() {
   const [activeTab, setActiveTab] = useState('profil');
+  const [formData, setFormData] = useState({
+    nama: '',
+    instansi: '',
+    email: '',
+    phone: '',
+  });
+
+  useEffect(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('adminUser') || '{}');
+      if (u) {
+        setFormData({
+          nama: u.name || (u.role === 'lurah' ? `Lurah ${u.kelurahanName || ''}` : `Admin ${u.kelurahanName || ''}`),
+          instansi: u.kelurahanName ? `Kelurahan ${u.kelurahanName}` : (u.role === 'lurah' ? 'Kelurahan' : 'Admin Kelurahan'),
+          email: u.email ? (u.email.includes('@') ? u.email : `${u.email}@banyuwangikab.go.id`) : '',
+          phone: u.phone || '081234567890',
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const handleSaveProfile = (e) => {
+    e.preventDefault();
+    try {
+      const u = JSON.parse(localStorage.getItem('adminUser') || '{}');
+      const updated = {
+        ...u,
+        name: formData.nama,
+        email: formData.email,
+        phone: formData.phone,
+      };
+      localStorage.setItem('adminUser', JSON.stringify(updated));
+      alert('Informasi profil berhasil diperbarui!');
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -113,26 +152,46 @@ export default function PengaturanAkun() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     <div>
                       <label className="block text-sm font-bold text-[#112A46] mb-2.5">Nama Lengkap</label>
-                      <input type="text" defaultValue="Admin Kelurahan" className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                      <input 
+                        type="text" 
+                        value={formData.nama} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, nama: e.target.value }))} 
+                        className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-[#112A46] mb-2.5">Instansi / Unit Kerja</label>
                       <div className="relative">
-                        <input type="text" defaultValue="Kelurahan Kepatihan" disabled className="w-full pl-10 pr-4 py-3.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-medium cursor-not-allowed" />
+                        <input 
+                          type="text" 
+                          value={formData.instansi} 
+                          disabled 
+                          className="w-full pl-10 pr-4 py-3.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 font-medium cursor-not-allowed" 
+                        />
                         <Icon icon="mdi:domain" className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-[#112A46] mb-2.5">Email Dinas</label>
                       <div className="relative">
-                        <input type="email" defaultValue="admin.kepatihan@banyuwangikab.go.id" className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                        <input 
+                          type="email" 
+                          value={formData.email} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} 
+                          className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                        />
                         <Icon icon="mdi:email-outline" className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-[#112A46] mb-2.5">Nomor WhatsApp</label>
                       <div className="relative">
-                        <input type="text" defaultValue="081234567890" className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                        <input 
+                          type="text" 
+                          value={formData.phone} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} 
+                          className="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" 
+                        />
                         <Icon icon="mdi:phone-outline" className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       </div>
                     </div>
@@ -140,7 +199,10 @@ export default function PengaturanAkun() {
                 </div>
 
                 <div className="pt-4 flex justify-end">
-                  <button className="px-8 py-3.5 bg-[#112A46] hover:bg-blue-900 text-white font-bold rounded-xl shadow-md shadow-[#112A46]/20 transition-all active:scale-95 flex items-center gap-2">
+                  <button 
+                    onClick={handleSaveProfile}
+                    className="px-8 py-3.5 bg-[#112A46] hover:bg-blue-900 text-white font-bold rounded-xl shadow-md shadow-[#112A46]/20 transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+                  >
                     <Icon icon="mdi:content-save-outline" className="w-5 h-5" /> Simpan Perubahan
                   </button>
                 </div>

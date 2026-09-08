@@ -1,7 +1,25 @@
-function authMiddleware(req, _res, next) {
-  // Isi pengecekan login/session/token di sini saat fitur auth sudah dibuat.
-  req.user = null
-  next()
+const tokenService = require('../utils/token')
+
+function authMiddleware(req, res, next) {
+  const authorizationHeader = req.headers.authorization || ''
+  const token = authorizationHeader.startsWith('Bearer ')
+    ? authorizationHeader.slice('Bearer '.length)
+    : req.headers['x-auth-token']
+
+  if (!token) {
+    return res.status(401).json({
+      message: 'Token login wajib dikirim.',
+    })
+  }
+
+  try {
+    req.user = tokenService.verifyToken(token)
+    next()
+  } catch (error) {
+    res.status(401).json({
+      message: error.message,
+    })
+  }
 }
 
 module.exports = authMiddleware

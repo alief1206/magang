@@ -31,6 +31,138 @@ export default function AdminHeader({ toggleSidebar }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // FUNGSI UNTUK REQUEST PUSH NOTIFICATION PERMISSION
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // POLLING UNTUK PUSH NOTIFICATION CHAT BARU & ASPIRASI BARU
+  const lastMsgAtRef = useRef(null);
+  const totalTicketsRef = useRef(null);
+  
+  useEffect(() => {
+    const adminUserStr = localStorage.getItem('adminUser');
+    let isLurah = false;
+    if (adminUserStr) {
+      try {
+        const adminUser = JSON.parse(adminUserStr);
+        if (adminUser.role === 'lurah') {
+          isLurah = true;
+        }
+      } catch (e) {}
+    }
+
+    const token = localStorage.getItem('adminToken') || localStorage.getItem('authToken') || localStorage.getItem('token');
+    if (!token) return;
+
+    // Fungsi fetch data awal tanpa notifikasi
+    const initData = async () => {
+      try {
+        // Fetch conversations
+        const convRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/conversations`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (convRes.ok) {
+          const result = await convRes.json();
+          if (result.data && result.data.length > 0) {
+            const maxDate = new Date(Math.max(...result.data.map(c => new Date(c.lastMessageAt || c.createdAt))));
+            lastMsgAtRef.current = maxDate;
+          }
+        }
+        
+        // Fetch stats
+        const statRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/reports/statistics`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (statRes.ok) {
+          const result = await statRes.json();
+          if (result.success && result.data) {
+            totalTicketsRef.current = result.data.total_tickets;
+          }
+        }
+      } catch (err) {}
+    };
+
+    const pollData = async () => {
+      try {
+        // Cek Chat Baru
+        const convRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/conversations`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (convRes.ok) {
+          const result = await convRes.json();
+          if (result.data && result.data.length > 0) {
+            const maxDate = new Date(Math.max(...result.data.map(c => new Date(c.lastMessageAt || c.createdAt))));
+            if (lastMsgAtRef.current && maxDate > lastMsgAtRef.current) {
+              lastMsgAtRef.current = maxDate;
+              // Show Notification
+              if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("Pesan Baru", {
+                  body: "Anda menerima pesan chat baru dari warga.",
+                  icon: "/vite.svg"
+                });
+              }
+            } else if (!lastMsgAtRef.current) {
+              lastMsgAtRef.current = maxDate;
+            }
+          }
+        }
+
+        // Cek Aspirasi Baru
+        const statRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/reports/statistics`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (statRes.ok) {
+          const result = await statRes.json();
+          if (result.success && result.data) {
+            const currentTotal = result.data.total_tickets;
+            if (totalTicketsRef.current !== null && currentTotal > totalTicketsRef.current) {
+              totalTicketsRef.current = currentTotal;
+              // Show Notification
+              if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("Aspirasi Baru Masuk", {
+                  body: "Terdapat aspirasi/laporan baru dari warga.",
+                  icon: "/vite.svg"
+                });
+              }
+            } else if (totalTicketsRef.current === null) {
+              totalTicketsRef.current = currentTotal;
+            }
+          }
+        }
+        
+        // Fetch lurah notifications for dropdown menu
+        if (isLurah) {
+          const notifRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/aspirations/notifications/lurah`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (notifRes.ok) {
+            const result = await notifRes.json();
+            if (result.data) {
+              setNotifications(result.data.map((notification) => ({
+                id: notification.id,
+                title: 'Aspirasi Diteruskan',
+                desc: notification.message,
+                time: new Date(notification.createdAt).toLocaleString('id-ID'),
+                unread: !notification.isRead,
+              })));
+            }
+          } else if (notifRes.status === 401) {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            navigate('/admin/login');
+          }
+        }
+      } catch (err) {}
+    };
+
+    initData();
+    const interval = setInterval(pollData, 5000);
+    return () => clearInterval(interval);
+  }, [navigate]);
+
   const handleLogout = () => {
     navigate('/admin/login');
   };
@@ -125,7 +257,7 @@ export default function AdminHeader({ toggleSidebar }) {
             {isNotifOpen && (
               <motion.div 
                 initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.2 }}
-                className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden z-50"
+                className="absolute -right-20 sm:right-0 mt-2 w-[85vw] max-w-[340px] sm:w-80 md:w-96 sm:max-w-none bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden z-[60] origin-top-right"
               >
                 <div className="flex items-center justify-between p-4 border-b border-slate-100">
                   <h4 className="font-bold text-[#112A46]">Notifikasi {unreadCount > 0 && `(${unreadCount})`}</h4>
@@ -171,8 +303,26 @@ export default function AdminHeader({ toggleSidebar }) {
                <Icon icon="mdi:account" className="w-6 h-6 text-blue-600"/>
             </div>
             <div className="hidden md:block text-right">
-              <h4 className="text-sm font-bold text-slate-800">Admin Kelurahan</h4>
-              <p className="text-xs text-slate-500">Kelurahan Kepatihan</p>
+              <h4 className="text-sm font-bold text-slate-800">
+                {(() => {
+                  try {
+                    const u = JSON.parse(localStorage.getItem('adminUser') || '{}');
+                    return u.name || (u.role === 'lurah' ? 'Lurah' : 'Admin Kelurahan');
+                  } catch(e) {
+                    return 'Admin Kelurahan';
+                  }
+                })()}
+              </h4>
+              <p className="text-xs text-slate-500 font-semibold">
+                {(() => {
+                  try {
+                    const u = JSON.parse(localStorage.getItem('adminUser') || '{}');
+                    return u.kelurahanName ? `Kelurahan ${u.kelurahanName}` : 'Wilayah Kecamatan';
+                  } catch(e) {
+                    return 'Kelurahan';
+                  }
+                })()}
+              </p>
             </div>
             <motion.div animate={{ rotate: isProfileOpen ? 180 : 0 }}>
               <Icon icon="mdi:chevron-down" className="w-5 h-5 text-slate-400" />
